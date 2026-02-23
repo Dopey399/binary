@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sweeps Snapshot Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { background: #0f172a; }
+
+    .machine {
+      box-shadow: 0 0 40px rgba(0,255,0,0.15);
+    }
+
+    .reel-container {
+      width: 110px;
+      height: 110px;
+      overflow: hidden;
+      border: 3px solid #1f2937;
+      border-radius: 10px;
+      background: #111827;
+      position: relative;
+    }
+
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+      transition: transform 0s;
+    }
+
+    .reel-strip img {
+      width: 100%;
+      height: 110px;
+      object-fit: contain;
+      padding: 8px;
+    }
+
+    .win-glow {
+      animation: glow 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px rgba(0,255,0,0.2); }
+      to { box-shadow: 0 0 25px rgba(0,255,0,0.7); }
+    }
+
+    .site-link {
+      color: #38bdf8;
+    }
+
+    .site-link:hover {
+      text-decoration: underline;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+
+<body class="text-gray-200 min-h-screen p-8">
+
+<!-- SLOT HEADER -->
+<div class="text-center mb-12">
+  <img src="logo.png" class="w-64 mx-auto mb-6">
+
+  <div class="machine bg-gray-900 p-6 rounded-xl border border-gray-800 inline-block">
+    <div class="flex gap-4 justify-center">
+      <div class="reel-container"><div class="reel-strip" id="reel1"></div></div>
+      <div class="reel-container"><div class="reel-strip" id="reel2"></div></div>
+      <div class="reel-container"><div class="reel-strip" id="reel3"></div></div>
+    </div>
+
+    <button onclick="spinReels()" 
+      class="mt-6 bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold w-full">
+      Spin
+    </button>
+  </div>
+</div>
+
+<!-- TOOL -->
+<h1 class="text-3xl font-semibold mb-2 tracking-wide">Sweeps Snapshot Pro</h1>
+<p class="text-gray-400 mb-6">Edge scoring • Trap detection • Bankroll impact • CSV export</p>
+
+<div class="flex gap-4 mb-6 flex-wrap">
+  <input 
+    type="text" 
+    id="searchInput"
+    placeholder="Search platform..."
+    class="p-2 rounded bg-gray-800 text-white w-64 outline-none"
+  />
+
+  <input 
+    type="number" 
+    id="bankrollInput"
+    placeholder="Your Bankroll ($)"
+    class="p-2 rounded bg-gray-800 text-white w-48 outline-none"
+  />
+</div>
+
+<div class="overflow-x-auto">
+<table class="min-w-full text-sm">
+<thead class="bg-gray-800">
+<tr>
+<th class="p-3 text-left">Platform</th>
+<th class="p-3 text-left">Bonus</th>
+<th class="p-3 text-left">Wager</th>
+<th class="p-3 text-left">Cashback %</th>
+<th class="p-3 text-left">Daily Bonus</th>
+<th class="p-3 text-left">Expires</th>
+<th class="p-3 text-left">Value Score</th>
+<th class="p-3 text-left">Risk</th>
+</tr>
+</thead>
+<tbody id="promoTable"></tbody>
+</table>
+</div>
+
+<script>
+
+/* SLOT */
+const symbols = ["cherry.png","diamond.png","seven.png","logo.png"];
+const visibleHeight = 110;
+const spinLoops = 15;
+
+function buildReel(reelId) {
+  const reel = document.getElementById(reelId);
+  reel.innerHTML = "";
+
+  for (let i = 0; i < spinLoops; i++) {
+    symbols.forEach(symbol => {
+      const img = document.createElement("img");
+      img.src = symbol;
+      reel.appendChild(img);
+    });
+  }
+
+  const finalLogo = document.createElement("img");
+  finalLogo.src = "logo.png";
+  reel.appendChild(finalLogo);
+}
+
+function spinSingleReel(reelId, delay) {
+  const reel = document.getElementById(reelId);
+  buildReel(reelId);
+
+  const totalHeight = reel.scrollHeight - visibleHeight;
+
+  reel.style.transition = "none";
+  reel.style.transform = "translateY(0px)";
+
+  setTimeout(() => {
+    reel.style.transition = `transform ${3 + delay}s cubic-bezier(.17,.67,.12,1.1)`;
+    reel.style.transform = `translateY(-${totalHeight}px)`;
+  }, 100);
+
+  setTimeout(() => {
+    reel.parentElement.classList.add("win-glow");
+  }, (3000 + delay * 1000));
+}
+
+function spinReels() {
+  document.querySelectorAll(".reel-container").forEach(r => {
+    r.classList.remove("win-glow");
+  });
+
+  spinSingleReel("reel1", 0);
+  spinSingleReel("reel2", 0.5);
+  spinSingleReel("reel3", 1);
+}
+
+buildReel("reel1");
+buildReel("reel2");
+buildReel("reel3");
+
+/* TOOL */
+const promos = [
+  {
+    platform: "CrownCoins",
+    url: "https://crowncoinscasino.com/?utm_campaign=e5a62c74-1909-4463-a6c8-f958748a9be4&utm_source=friends",
+    bonus: 60,
+    wager: 5,
+    cashback: 5,
+    daily: 1,
+    expires: "2026-03-15"
+  },
+  {
+    platform: "LoneStar Casino",
+    url: "https://lonestarcasino.com/refer/1490917",
+    bonus: 105,
+    wager: 5,
+    cashback: 3,
+    daily: 1,
+    expires: "2026-03-15"
+  },
+  {
+    platform: "Stake.us",
+    url: "https://stake.us/?c=n75tP6HL",
+    bonus: 56,
+    wager: 3,
+    cashback: 8,
+    daily: 1,
+    expires: "2026-03-20"
+  },
+  {
+    platform: "McLuck Casino",
+    url: "https://mcluckcasino.com",
+    bonus: 30,
+    wager: 4,
+    cashback: 2,
+    daily: 1,
+    expires: "2026-03-15"
+  },
+  {
+    platform: "MegaBonanza",
+    url: "https://www.megabonanza.com/?r=336854633",
+    bonus: 50,
+    wager: 4,
+    cashback: 1,
+    daily: 0.8,
+    expires: "2026-03-12"
+  },
+  {
+    platform: "Jackpota",
+    url: "https://www.jackpota.com/?r=411608798",
+    bonus: 35,
+    wager: 3,
+    cashback: 3,
+    daily: 1,
+    expires: "2026-03-22"
+  },
+  {
+    platform: "Sixty6 Casino",
+    url: "https://sixty6casino.com",
+    bonus: 2,
+    wager: 6,
+    cashback: 0,
+    daily: 0.5,
+    expires: "2026-03-10"
+  },
+  {
+    platform: "SweepNext Casino",
+    url: "https://sweepnextcasino.com",
+    bonus: 50,
+    wager: 4,
+    cashback: 2,
+    daily: 0.7,
+    expires: "2026-03-18"
+  },
+  {
+    platform: "Sweet Sweeps Casino",
+    url: "https://sweetsweepscasino.com",
+    bonus: 40,
+    wager: 5,
+    cashback: 2,
+    daily: 0.7,
+    expires: "2026-03-14"
+  },
+  {
+    platform: "Hello Millions",
+    url: "https://hellomillions.com",
+    bonus: 25,
+    wager: 4,
+    cashback: 1,
+    daily: 0.6,
+    expires: "2026-03-15"
+  },
+  {
+    platform: "Rolla Casino",
+    url: "https://rollacasino.com",
+    bonus: 30,
+    wager: 4,
+    cashback: 2,
+    daily: 0.8,
+    expires: "2026-03-15"
+  },
+  {
+    platform: "MyPrize.US",
+    url: "https://myprize.us",
+    bonus: 60,
+    wager: 3,
+    cashback: 3,
+    daily: 1,
+    expires: "2026-03-20"
+  },
+  {
+    platform: "Spree Casino",
+    url: "https://spreecasino.com",
+    bonus: 50,
+    wager: 4,
+    cashback: 2,
+    daily: 0.7,
+    expires: "2026-03-16"
+  },
+  {
+    platform: "Fortune Coins",
+    url: "https://fortunecoins.com",
+    bonus: 20,
+    wager: 5,
+    cashback: 1,
+    daily: 0.4,
+    expires: "2026-03-10"
+  },
+  {
+    platform: "ACE.com Casino",
+    url: "https://ace.com",
+    bonus: 2.5,
+    wager: 5,
+    cashback: 0,
+    daily: 0.5,
+    expires: "2026-03-18"
+  }
+];
+
+function calculateValueScore(p) {
+  return ((p.bonus + (p.daily * 7)) / p.wager + (p.cashback / 10)).toFixed(2);
+}
+
+function riskLevel(wager) {
+  if (wager <= 1) return { label: "Low", color: "text-green-400" };
+  if (wager <= 5) return { label: "Medium", color: "text-yellow-400" };
+  return { label: "High", color: "text-red-500" };
+}
+
+function renderTable(data) {
+  const table = document.getElementById("promoTable");
+  table.innerHTML = "";
+
+  data.forEach(promo => {
+    const score = calculateValueScore(promo);
+    const risk = riskLevel(promo.wager);
+
+    table.innerHTML += `
+      <tr class="border-b border-gray-800">
+        <td class="p-3 font-semibold">
+          <a href="${promo.url}" target="_blank" class="site-link">
+            ${promo.platform}
+          </a>
+        </td>
+        <td class="p-3">$${promo.bonus}</td>
+        <td class="p-3">${promo.wager}x</td>
+        <td class="p-3">${promo.cashback}%</td>
+        <td class="p-3">$${promo.daily}</td>
+        <td class="p-3">${promo.expires}</td>
+        <td class="p-3 font-semibold text-green-400">${score}</td>
+        <td class="p-3 font-semibold ${risk.color}">${risk.label}</td>
+      </tr>
+    `;
+  });
+}
+
+document.getElementById("searchInput").addEventListener("input", function(e) {
+  const value = e.target.value.toLowerCase();
+  const filtered = promos.filter(p => 
+    p.platform.toLowerCase().includes(value)
+  );
+  renderTable(filtered);
+});
+
+renderTable(promos);
+
+</script>
+
+</body>
+</html>

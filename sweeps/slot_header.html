@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Townsend Slot Header</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: black;
+    }
+
+    .machine {
+      box-shadow: 0 0 40px rgba(0,255,0,0.15);
+    }
+
+    .reel-container {
+      width: 130px;
+      height: 130px;
+      overflow: hidden;
+      border: 4px solid #1f2937;
+      border-radius: 12px;
+      background: #111827;
+      position: relative;
+    }
+
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+      transition: transform 0s;
+    }
+
+    .reel-strip img {
+      width: 100%;
+      height: 130px;
+      object-fit: contain;
+      padding: 10px;
+    }
+
+    .win-glow {
+      animation: glow 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px rgba(0,255,0,0.2); }
+      to { box-shadow: 0 0 30px rgba(0,255,0,0.7); }
+    }
+  </style>
+</head>
+
+<body class="text-white min-h-screen flex flex-col items-center justify-center">
+
+  <!-- HEADER LOGO -->
+  <div class="mb-10">
+    <img src="logo.png" class="w-72 mx-auto">
+  </div>
+
+  <!-- SLOT MACHINE -->
+  <div class="machine bg-gray-900 p-8 rounded-2xl border border-gray-800">
+
+    <div class="flex gap-6">
+      <div class="reel-container">
+        <div class="reel-strip" id="reel1"></div>
+      </div>
+
+      <div class="reel-container">
+        <div class="reel-strip" id="reel2"></div>
+      </div>
+
+      <div class="reel-container">
+        <div class="reel-strip" id="reel3"></div>
+      </div>
+    </div>
+
+    <button onclick="spinReels()" 
+      class="mt-8 bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-semibold w-full">
+      Spin
+    </button>
+
+  </div>
+
+<script>
+
+const symbols = [
+  "cherry.png",
+  "diamond.png",
+  "seven.png",
+  "logo.png"
+];
+
+const visibleHeight = 130;
+const spinLoops = 15;
+
+function buildReel(reelId) {
+  const reel = document.getElementById(reelId);
+  reel.innerHTML = "";
+
+  for (let i = 0; i < spinLoops; i++) {
+    symbols.forEach(symbol => {
+      const img = document.createElement("img");
+      img.src = symbol;
+      reel.appendChild(img);
+    });
+  }
+
+  // Add final landing logo at bottom
+  const finalLogo = document.createElement("img");
+  finalLogo.src = "logo.png";
+  reel.appendChild(finalLogo);
+}
+
+function spinSingleReel(reelId, delay) {
+  const reel = document.getElementById(reelId);
+
+  buildReel(reelId);
+
+  const totalHeight = reel.scrollHeight - visibleHeight;
+
+  reel.style.transition = "none";
+  reel.style.transform = "translateY(0px)";
+
+  setTimeout(() => {
+    reel.style.transition = `transform ${3 + delay}s cubic-bezier(.17,.67,.12,1.1)`;
+    reel.style.transform = `translateY(-${totalHeight}px)`;
+  }, 100);
+
+  setTimeout(() => {
+    reel.parentElement.classList.add("win-glow");
+  }, (3000 + delay * 1000));
+}
+
+function spinReels() {
+  document.querySelectorAll(".reel-container").forEach(r => {
+    r.classList.remove("win-glow");
+  });
+
+  spinSingleReel("reel1", 0);
+  spinSingleReel("reel2", 0.5);
+  spinSingleReel("reel3", 1);
+}
+
+buildReel("reel1");
+buildReel("reel2");
+buildReel("reel3");
+
+</script>
+
+</body>
+</html>
