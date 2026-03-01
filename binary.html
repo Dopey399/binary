@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+
+const img = new Image();
+img.src = "maze.png";
+
+img.onload = function() {
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = img.width;
+  canvas.height = img.height;
+  ctx.drawImage(img, 0, 0);
+
+  const data = ctx.getImageData(0, 0, img.width, img.height).data;
+
+  const maze = [];
+
+  for (let y = 0; y < img.height; y++) {
+    let row = [];
+
+    for (let x = 0; x < img.width; x++) {
+
+      const i = (y * img.width + x) * 4;
+      const r = data[i];      // red channel
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const brightness = (r + g + b) / 3;
+
+      // Light pixels = wall (1)
+      // Dark pixels = path (0)
+      row.push(brightness > 150 ? 1 : 0);
+    }
+
+    maze.push(row);
+  }
+
+  console.log(JSON.stringify(maze));
+};
+
+</script>
+</body>
+</html>
