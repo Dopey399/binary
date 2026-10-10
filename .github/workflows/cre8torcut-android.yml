@@ -28,9 +28,33 @@ jobs:
         working-directory: android-build
         run: gradle --no-daemon :app:assembleDebug
 
+      - name: Emulator startup smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r android-build/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am force-stop com.cre8torcut.mobile
+            adb shell am start -W -n com.cre8torcut.mobile/.MainActivity
+            sleep 5
+            PID="$(adb shell pidof com.cre8torcut.mobile | tr -d '\r')"
+            test -n "$PID"
+            adb shell dumpsys activity activities | grep -F "com.cre8torcut.mobile/.MainActivity"
+            adb exec-out screencap -p > cre8torcut-smoke.png
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: cre8torcut-clean-host
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload smoke screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: cre8torcut-smoke-screenshot
+          path: cre8torcut-smoke.png
           if-no-files-found: error
