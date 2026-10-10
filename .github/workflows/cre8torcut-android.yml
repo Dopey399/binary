@@ -28,7 +28,7 @@ jobs:
         working-directory: android-build
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: Emulator startup smoke test
+      - name: Emulator startup diagnostic
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -36,25 +36,49 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
+            set +e
             adb install -r android-build/app/build/outputs/apk/debug/app-debug.apk
+            INSTALL_RC=$?
+            adb logcat -c
             adb shell am force-stop com.cre8torcut.mobile
-            adb shell am start -W -n com.cre8torcut.mobile/.MainActivity
-            sleep 5
+            adb shell am start -n com.cre8torcut.mobile/.MainActivity
+            START_RC=$?
+            sleep 20
             PID="$(adb shell pidof com.cre8torcut.mobile | tr -d '\r')"
-            test -n "$PID"
-            adb shell dumpsys activity activities | grep -F "com.cre8torcut.mobile/.MainActivity"
-            adb exec-out screencap -p > cre8torcut-smoke.png
+            echo "INSTALL_RC=$INSTALL_RC" | tee cre8torcut-diagnostic.txt
+            echo "START_RC=$START_RC" | tee -a cre8torcut-diagnostic.txt
+            echo "PID=$PID" | tee -a cre8torcut-diagnostic.txt
+            echo "--- activity ---" | tee -a cre8torcut-diagnostic.txt
+            adb shell dumpsys activity activities | grep -C 8 'com.cre8torcut.mobile' | tee -a cre8torcut-diagnostic.txt || true
+            echo "--- crash log ---" | tee -a cre8torcut-diagnostic.txt
+            adb logcat -d -v threadtime > cre8torcut-logcat-full.txt
+            grep -E -C 40 'FATAL EXCEPTION|AndroidRuntime|Process: com.cre8torcut.mobile|com.cre8torcut.mobile' cre8torcut-logcat-full.txt | tee -a cre8torcut-diagnostic.txt || true
+            adb exec-out screencap -p > cre8torcut-smoke.png || true
+            if grep -qE 'FATAL EXCEPTION.*|Process: com.cre8torcut.mobile' cre8torcut-logcat-full.txt; then
+              echo 'APP_FATAL_CRASH=1' | tee -a cre8torcut-diagnostic.txt
+              exit 2
+            fi
+            if [ "$INSTALL_RC" -ne 0 ] || [ "$START_RC" -ne 0 ] || [ -z "$PID" ]; then
+              echo 'APP_ALIVE=0' | tee -a cre8torcut-diagnostic.txt
+              exit 3
+            fi
+            echo 'APP_ALIVE=1' | tee -a cre8torcut-diagnostic.txt
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cre8torcut-clean-host
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Upload smoke screenshot
+      - name: Upload diagnostic
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-smoke-screenshot
-          path: cre8torcut-smoke.png
-          if-no-files-found: error
+          name: cre8torcut-startup-diagnostic
+          path: |
+            cre8torcut-diagnostic.txt
+            cre8torcut-logcat-full.txt
+            cre8torcut-smoke.png
+          if-no-files-found: warn
