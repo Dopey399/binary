@@ -1,6 +1,7 @@
 package com.cre8torcut.mobile;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -15,6 +16,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 1201;
@@ -55,7 +61,7 @@ public class MainActivity extends Activity {
                 }
                 pendingFiles = filePathCallback;
                 try {
-                    Intent intent = fileChooserParams.createIntent();
+                    Intent intent = createOpenDocumentIntent(fileChooserParams);
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (Throwable t) {
@@ -92,16 +98,69 @@ public class MainActivity extends Activity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    private Intent createOpenDocumentIntent(WebChromeClient.FileChooserParams params) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                params != null && params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
+
+        Set<String> mimeTypes = new LinkedHashSet<>();
+        if (params != null && params.getAcceptTypes() != null) {
+            for (String accept : params.getAcceptTypes()) {
+                if (accept == null) continue;
+                for (String token : accept.split(",")) {
+                    String value = token.trim().toLowerCase();
+                    if (value.contains("/") && !value.startsWith(".")) {
+                        mimeTypes.add(value);
+                    }
+                }
+            }
+        }
+
+        if (mimeTypes.isEmpty()) {
+            intent.setType("*/*");
+        } else if (mimeTypes.size() == 1) {
+            intent.setType(mimeTypes.iterator().next());
+        } else {
+            intent.setType("*/*");
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toArray(new String[0]));
+        }
+        return intent;
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_REQUEST || pendingFiles == null) {
             return;
         }
+
         Uri[] result = null;
-        if (resultCode == RESULT_OK) {
-            result = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        if (resultCode == RESULT_OK && data != null) {
+            List<Uri> selected = new ArrayList<>();
+            ClipData clipData = data.getClipData();
+            if (clipData != null) {
+                for (int i = 0; i < clipData.getItemCount(); i++) {
+                    Uri uri = clipData.getItemAt(i).getUri();
+                    if (uri != null) selected.add(uri);
+                }
+            } else if (data.getData() != null) {
+                selected.add(data.getData());
+            }
+
+            for (Uri uri : selected) {
+                try {
+                    getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (SecurityException ignored) {
+                    // Some providers grant temporary read access only. That is still valid for this import session.
+                }
+            }
+            if (!selected.isEmpty()) {
+                result = selected.toArray(new Uri[0]);
+            }
         }
+
         pendingFiles.onReceiveValue(result);
         pendingFiles = null;
     }
