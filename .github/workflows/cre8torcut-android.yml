@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore Cre8torCut assets and apply Android media-import fix
+      - name: Restore Cre8torCut assets and apply Android fixes
         shell: bash
         run: |
           set -euo pipefail
@@ -25,8 +25,9 @@ jobs:
           tar -xzf /tmp/cre8torcut-assets.tgz -C android-build/app/src/main/assets
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('android-build/app/src/main/assets/app.js')
-          s = p.read_text()
+
+          app = Path('android-build/app/src/main/assets/app.js')
+          s = app.read_text()
           old = "const list = [...files].filter((file) => file && file.type.startsWith('video/'));"
           new = """const list = [...files].filter((file) => {
                 if (!file) return false;
@@ -37,11 +38,21 @@ jobs:
               });"""
           if old not in s:
               raise SystemExit('expected v0.2 media filter line not found')
-          p.write_text(s.replace(old, new))
+          app.write_text(s.replace(old, new))
+
+          css = Path('android-build/app/src/main/assets/styles.css')
+          s = css.read_text()
+          marker = '* { box-sizing: border-box; }\n'
+          rule = '[hidden] { display: none !important; }\n'
+          if rule not in s:
+              if marker not in s:
+                  raise SystemExit('styles insertion point not found')
+              s = s.replace(marker, marker + rule, 1)
+          css.write_text(s)
           PY
           cat > /tmp/cre8torcut-assets.sha256 <<'EOF'
           c8668b1e00fabd5f7b67b10113e8e1bbfbae0a423112fe280c8b3debe4ba3649  android-build/app/src/main/assets/index.html
-          27522421ac35e731b21cc85629dd4e8afc51d32b1464ebeea165542e5f04e8ef  android-build/app/src/main/assets/styles.css
+          df2d892cdd8816081363ae679bf0f05d6134942ce2a60edd730319c988ab0c27  android-build/app/src/main/assets/styles.css
           bffcda9ff510c9eef2a9611c09c0650557c19635a15616b53d4b50db9c0780c2  android-build/app/src/main/assets/editor-core.js
           ec41e7103d40bc5c4d8eeab08aafd8c105b7f44273ec536faba8dc780f6788f9  android-build/app/src/main/assets/app.js
           EOF
@@ -84,7 +95,7 @@ jobs:
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'EOF'
           c8668b1e00fabd5f7b67b10113e8e1bbfbae0a423112fe280c8b3debe4ba3649  /tmp/apk-assets/assets/index.html
-          27522421ac35e731b21cc85629dd4e8afc51d32b1464ebeea165542e5f04e8ef  /tmp/apk-assets/assets/styles.css
+          df2d892cdd8816081363ae679bf0f05d6134942ce2a60edd730319c988ab0c27  /tmp/apk-assets/assets/styles.css
           bffcda9ff510c9eef2a9611c09c0650557c19635a15616b53d4b50db9c0780c2  /tmp/apk-assets/assets/editor-core.js
           ec41e7103d40bc5c4d8eeab08aafd8c105b7f44273ec536faba8dc780f6788f9  /tmp/apk-assets/assets/app.js
           EOF
@@ -94,6 +105,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.2.4-android-media-fix
+          name: cre8torcut-v0.2.5-android-overlay-fix
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
