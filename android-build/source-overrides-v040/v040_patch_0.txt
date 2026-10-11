@@ -1,0 +1,98 @@
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -3,7 +3,7 @@
+ <head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+-  <meta name="theme-color" content="#111827" />
++  <meta name="theme-color" content="#05080d" />
+   <title>Cre8torCut — Browser Video Editor</title>
+   <link rel="stylesheet" href="styles.css" />
+ </head>
+@@ -11,18 +11,25 @@
+   <div class="app-shell">
+     <header class="topbar">
+       <div>
+-        <div class="brand">Cre8torCut <span class="version">v0.3.0</span></div>
++        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.4.0</span></div>
+         <div class="subtitle">Local multi-clip browser editor — media stays on your device</div>
+       </div>
+       <div class="top-actions">
+-        <button id="undoBtn" class="button" disabled title="Undo (Ctrl/Cmd+Z)">Undo</button>
+-        <button id="redoBtn" class="button" disabled title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+-        <button id="saveProjectBtn" class="button">Save project</button>
+-        <label class="button" for="projectInput">Load project</label>
++        <button id="undoBtn" class="button top-command" disabled title="Undo (Ctrl/Cmd+Z)" aria-label="Undo">
++          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg><span>Undo</span>
++        </button>
++        <button id="redoBtn" class="button top-command" disabled title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo">
++          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M19 12h-8a6 6 0 0 0-6 6"/></svg><span>Redo</span>
++        </button>
++        <button id="saveProjectBtn" class="button desktop-project-action">Save project</button>
++        <label class="button desktop-project-action" for="projectInput">Load project</label>
+         <input id="projectInput" type="file" accept="application/json,.json,.cre8torcut" hidden />
+-        <label class="button primary" for="videoInput">Add media</label>
++        <label class="button primary desktop-project-action" for="videoInput">Add media</label>
+         <input id="videoInput" type="file" accept="video/*" multiple hidden />
+-        <button id="exportBtn" class="button success" disabled>Export WebM</button>
++        <button id="mobileMoreBtn" class="button top-command mobile-only" type="button" aria-label="More project actions">
++          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
++        </button>
++        <button id="exportBtn" class="button success export-command" disabled><span class="desktop-export-label">Export WebM</span><span class="mobile-export-label">Export</span></button>
+       </div>
+     </header>
+ 
+@@ -75,12 +82,15 @@
+         </div>
+ 
+         <div class="transport">
+-          <button id="playBtn" class="icon-button" disabled aria-label="Play or pause">▶</button>
++          <button id="playBtn" class="icon-button play-command" disabled aria-label="Play or pause">▶</button>
+           <span id="currentTime">00:00.000</span>
+           <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" disabled />
+           <span id="durationTime">00:00.000</span>
+           <button id="previousClipBtn" class="button small" disabled>Prev clip</button>
+           <button id="nextClipBtn" class="button small" disabled>Next clip</button>
++          <button id="fullscreenBtn" class="icon-button preview-fullscreen mobile-only" type="button" aria-label="Toggle preview fullscreen" title="Fullscreen preview">
++            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
++          </button>
+         </div>
+ 
+         <div id="exportStatus" class="export-status" hidden>
+@@ -102,7 +112,11 @@
+         </div>
+ 
+         <div class="control-group" data-tool="trim">
+-          <div class="group-title">Trim</div>
++          <div class="group-title">Edit clip</div>
++          <div class="mobile-edit-shortcuts mobile-only">
++            <button id="mobileSplitToolBtn" class="tool-shortcut" type="button"><span>✂</span>Split</button>
++            <button id="mobileDeleteToolBtn" class="tool-shortcut danger" type="button"><span>⌫</span>Delete</button>
++          </div>
+           <div class="two-col">
+             <label>Source in
+               <input id="trimStart" type="number" min="0" step="0.001" value="0" disabled />
+@@ -208,25 +222,45 @@
+           <button id="deleteClipBtn" class="button small danger" disabled>Delete clip</button>
+         </div>
+       </div>
++      <div class="timeline-toolbar mobile-only" aria-label="Timeline controls">
++        <button id="timelineZoomBtn" class="timeline-tool" type="button" aria-label="Change timeline zoom">
++          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M10.5 7.5v6M7.5 10.5h6"/></svg>
++          <span id="timelineZoomLabel">2×</span>
++        </button>
++        <span class="timeline-tip">Drag timeline · tap clip to edit</span>
++      </div>
+       <div id="timeline" class="timeline" aria-label="Timeline">
+-        <div id="timelineClips" class="timeline-clips"></div>
+-        <div id="playhead" class="playhead"></div>
+-        <div class="timeline-labels"><span>0</span><span>25%</span><span>50%</span><span>75%</span><span>End</span></div>
++        <div id="timelineStage" class="timeline-stage">
++          <div id="timelineRuler" class="timeline-ruler" aria-hidden="true"></div>
++          <div id="timelineClips" class="timeline-clips"></div>
++          <div id="playhead" class="playhead"></div>
++        </div>
+       </div>
+     </section>
+ 
+     <nav id="mobileDock" class="mobile-dock" aria-label="Mobile editing tools">

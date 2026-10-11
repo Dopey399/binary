@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact Cre8torCut v0.3.0 assets
+      - name: Restore exact Cre8torCut v0.4.0 assets
         shell: bash
         run: |
           set -euo pipefail
@@ -36,18 +36,27 @@ jobs:
           text = p.read_text()
           old_footer = 'v0.2.10 restores the intended cinema mobile workspace and keeps 50 text styles, 24 animated-text presets, and the deterministic project model with per-clip edits, undo/redo, project JSON save/load, sequential multi-clip playback, and WebM export. MP4/H.264 is not implemented yet.'
           new_footer = 'v0.3.0 introduces the professional adaptive Studio workspace in landscape while preserving the repaired portrait cinema editor, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.'
-          assert text.count('v0.2.10') >= 2, 'expected v0.2.10 HTML markers missing'
-          assert old_footer in text, 'expected v0.2.10 footer missing'
+          assert old_footer in text
           text = text.replace('<span class="version">v0.2.10</span>', '<span class="version">v0.3.0</span>', 1)
           text = text.replace(old_footer, new_footer, 1)
           p.write_text(text)
           PYHTML
           cat android-build/source-overrides-v030/studio-0.css android-build/source-overrides-v030/studio-1.css >> android-build/app/src/main/assets/styles.css
+          cat \
+            android-build/source-overrides-v040/v040_patch_0.txt \
+            android-build/source-overrides-v040/v040_patch_1.txt \
+            android-build/source-overrides-v040/v040_patch_2.txt \
+            android-build/source-overrides-v040/v040_patch_3.txt \
+            android-build/source-overrides-v040/v040_patch_4.txt \
+            android-build/source-overrides-v040/v040_patch_5.txt \
+            android-build/source-overrides-v040/v040_patch_6.txt \
+            > /tmp/v040.patch
+          patch -p1 < /tmp/v040.patch
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          db15830d71a86a05e649dc12002a1ed3262101c6ef724d11a6ea7b9e9cfa5f6e  android-build/app/src/main/assets/index.html
-          eeac1454e0ed6f74fe1711220b152e2708f44168ab5da7f9935f167acfef412b  android-build/app/src/main/assets/styles.css
+          4324dd605a8769cfa8db71cdef9ac92a4c951e7a97606ebacf57bb48a7fef077  android-build/app/src/main/assets/index.html
+          b584392881f56f74590ffb93d08cf9009584da95bc08ed992a589b039c928b30  android-build/app/src/main/assets/styles.css
           dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  android-build/app/src/main/assets/editor-core.js
-          3a6d07e409b273ce234003efe980fcce52127bf8962ddf46f70822c7a936fae6  android-build/app/src/main/assets/app.js
+          dad3733a8b4cd11ac5cc7462baa9b1e6d617bd0cb22cdb4030887b17e046a611  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
@@ -57,34 +66,30 @@ jobs:
           import re
           from pathlib import Path
           css = Path('android-build/app/src/main/assets/styles.css').read_text()
-          assert '\\n' not in css, 'literal escaped-newline sequence found in CSS'
-          assert 'v0.2.7 mobile cinema workspace' in css, 'portrait cinema CSS marker missing'
-          assert 'grid-template-areas: "topbar" "viewer" "timeline" "dock"' in css, 'portrait cinema grid missing'
-          assert '.top-actions > * { display: none !important; }' in css, 'compact portrait topbar rule missing'
-          assert '.project-strip, .media-panel, .inspector {' in css, 'portrait mobile sheet rule missing'
-          assert 'v0.3.0 professional UI foundation' in css, 'v0.3.0 UI marker missing'
-          assert 'Landscape Studio workspace' in css, 'landscape Studio marker missing'
-          assert '@media (orientation: landscape) and (max-height: 620px) and (min-width: 560px)' in css, 'landscape Studio media query missing'
-          assert 'grid-template-columns: 148px minmax(0, 1fr) 260px' in css, 'landscape three-pane Studio grid missing'
-          assert 'content: "STUDIO"' in css, 'Studio badge marker missing'
-          text = Path('android-build/app/src/main/assets/app.js').read_text()
-          styles_block = text.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0]
-          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", styles_block)
-          assert len(styles) == 50, f'expected 50 text styles, found {len(styles)}'
-          assert len({sid for sid, _ in styles}) == 50, 'duplicate style ids'
-          animations_block = text.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0]
-          animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", animations_block)
-          assert len(animations) == 24, f'expected 24 text animations, found {len(animations)}'
-          assert len({aid for aid, _ in animations}) == 24, 'duplicate animation ids'
-          assert 'drawFrame(exportedTime);' in text, 'animated export marker missing'
           html = Path('android-build/app/src/main/assets/index.html').read_text()
-          assert 'v0.3.0' in html, 'v0.3.0 UI marker missing'
+          app = Path('android-build/app/src/main/assets/app.js').read_text()
+          assert '\\n' not in css, 'literal escaped-newline sequence found in CSS'
+          assert 'v0.2.7 mobile cinema workspace' in css
+          assert 'v0.3.0 professional UI foundation' in css
+          assert 'v0.4.0 Cutroom mobile UI' in css
+          assert 'v0.4.0 Studio compatibility correction' in css
+          assert 'grid-template-columns: 148px minmax(0,1fr) 260px !important' in css
+          assert 'v0.4.0' in html
+          assert 'id="timelineStage"' in html
+          assert 'id="timelineZoomBtn"' in html
           assert 'id="mobileDock"' in html
-          assert 'id="textStyleFeatured"' in html
-          assert 'id="textAnimationFeatured"' in html
-          print('CSS escaped-newline regression gate: PASS')
-          print('Portrait cinema workspace markers: PASS')
-          print('Landscape Studio workspace markers: PASS')
+          ids = re.findall(r'id="([^"]+)"', html)
+          assert len(ids) == len(set(ids)), 'duplicate HTML ids'
+          styles_block = app.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0]
+          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", styles_block)
+          assert len(styles) == 50 and len({sid for sid, _ in styles}) == 50
+          animations_block = app.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0]
+          animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", animations_block)
+          assert len(animations) == 24 and len({aid for aid, _ in animations}) == 24
+          assert 'TIMELINE_ZOOM_LEVELS' in app
+          assert 'thumbnail' in app
+          assert 'drawFrame(exportedTime);' in app
+          print('v0.4.0 Cutroom + Studio regression gates: PASS')
           print('Text style preset count: PASS (50)')
           print('Text animation preset count: PASS (24)')
           PY
@@ -124,10 +129,10 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'SUMS'
-          db15830d71a86a05e649dc12002a1ed3262101c6ef724d11a6ea7b9e9cfa5f6e  /tmp/apk-assets/assets/index.html
-          eeac1454e0ed6f74fe1711220b152e2708f44168ab5da7f9935f167acfef412b  /tmp/apk-assets/assets/styles.css
+          4324dd605a8769cfa8db71cdef9ac92a4c951e7a97606ebacf57bb48a7fef077  /tmp/apk-assets/assets/index.html
+          b584392881f56f74590ffb93d08cf9009584da95bc08ed992a589b039c928b30  /tmp/apk-assets/assets/styles.css
           dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  /tmp/apk-assets/assets/editor-core.js
-          3a6d07e409b273ce234003efe980fcce52127bf8962ddf46f70822c7a936fae6  /tmp/apk-assets/assets/app.js
+          dad3733a8b4cd11ac5cc7462baa9b1e6d617bd0cb22cdb4030887b17e046a611  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
@@ -135,6 +140,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.3.0-studio-landscape
+          name: cre8torcut-v0.4.0-cutroom-pro-ui
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

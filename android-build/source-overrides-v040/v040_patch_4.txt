@@ -1,0 +1,110 @@
++  .text-featured-chip.active, .text-style-option.active { border-color: #38bdf8; background: rgba(14,165,233,.16); color: #e0f2fe; }
++  .footer-note { display: none; }
++}
++
++@media (orientation: portrait) and (max-width: 680px) and (max-height: 720px) {
++  .app-shell { grid-template-rows: 46px minmax(0,1fr) 184px 62px; }
++  .timeline-panel { height: 184px; grid-template-rows: 30px 24px minmax(0,1fr); }
++  .timeline-clips { top: 27px; height: 72px; }
++  .timeline-clip { height: 64px; }
++  .mobile-dock { bottom: 0; }
++  .project-strip, .media-panel, .inspector { bottom: 62px; max-height: min(58dvh, 440px); }
++  .transport { grid-template-columns: 42px 56px minmax(0,1fr) 56px 36px; padding: 5px 6px; }
++}
++
++#dropZone:fullscreen { width: 100vw; height: 100vh; background: #000; display: grid; place-items: center; }
++#dropZone:fullscreen #previewCanvas { width: 100vw; height: 100vh; object-fit: contain; }
++
++/* v0.4.0 Studio compatibility correction — keep landscape three-pane hierarchy after tablet rules. */
++@media (orientation: landscape) and (max-height: 620px) and (min-width: 560px) {
++  :root { --studio-accent: #2bb8ff; --studio-accent-2: #7dd3fc; }
++  .workspace { grid-template-columns: 148px minmax(0,1fr) 260px !important; }
++  .inspector { grid-column: auto !important; display: block !important; }
++  .inspector .panel-heading { grid-column: auto !important; }
++  .inspector .control-group { display: grid; }
++  .brand::after { border-color: rgba(43,184,255,.38); background: rgba(14,165,233,.12); color: #7dd3fc; }
++  .top-actions .button.primary { background: #0f8fd1; border-color: #24aee8; }
++  .top-actions .button.success { background: #087a5d; border-color: #0b9470; }
++  .media-item { display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 6px; align-items: center; }
++  .media-thumb { display: block !important; width: 42px; height: 28px; border-radius: 5px; background: #07101a; background-size: cover; background-position: center; }
++  .media-copy { display: block !important; min-width: 0; }
++  .media-meta { display: flex !important; font-size: 6px !important; }
++  .timeline { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
++  .timeline::-webkit-scrollbar { display: none; }
++  .timeline-stage { height: 100%; min-width: 100%; position: relative; }
++  .timeline-ruler { display: block; height: 20px; }
++  .timeline-clips { position: absolute; left: 0; right: auto; top: 22px; height: 48px; display: block; }
++  .timeline-clip { position: absolute; top: 0; height: 44px; background-size: cover; background-position: center; background-repeat: no-repeat; }
++  .timeline-clip strong { position: absolute; z-index: 2; left: 5px; right: 5px; bottom: 13px; }
++  .clip-duration { position: absolute; z-index: 2; left: 5px; bottom: 3px; font-size: 6px; }
++  .clip-type-badge, .clip-overlay-badge { position: absolute; z-index: 3; top: 3px; min-width: 12px; height: 12px; border-radius: 3px; font-size: 6px; display: grid; place-items: center; }
++  .clip-type-badge { left: 3px; background: rgba(5,14,24,.8); color: #bae6fd; }
++  .clip-overlay-badge { right: 3px; background: rgba(43,184,255,.9); color: #03111b; }
++  .playhead { background: #2bb8ff; box-shadow: 0 0 8px rgba(43,184,255,.55); }
++  .playhead::before { border-top-color: #2bb8ff; }
++}
++
++@media (orientation: landscape) and (max-height: 620px) and (min-width: 560px) and (max-width: 820px) {
++  .workspace { grid-template-columns: 124px minmax(0,1fr) 228px !important; }
++}
++
++@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
++  .workspace { grid-template-columns: 120px minmax(0,1fr) 220px !important; }
++}
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -25,6 +25,10 @@
+   const playhead = $('playhead');
+   const timeline = $('timeline');
+   const timelineClips = $('timelineClips');
++  const timelineStage = $('timelineStage');
++  const timelineRuler = $('timelineRuler');
++  const timelineZoomBtn = $('timelineZoomBtn');
++  const timelineZoomLabel = $('timelineZoomLabel');
+   const timelineSummary = $('timelineSummary');
+   const mediaList = $('mediaList');
+   const mediaCount = $('mediaCount');
+@@ -87,6 +91,10 @@
+   let captureGain = null;
+   let captureDestination = null;
+   const AUTOSAVE_KEY = 'cre8torcut.autosave.v2';
++  const TIMELINE_ZOOM_LEVELS = [32, 48, 72];
++  let timelineZoomIndex = 1;
++
++  function timelinePixelsPerSecond() { return TIMELINE_ZOOM_LEVELS[timelineZoomIndex] || 48; }
+ 
+ 
+   const TEXT_STYLE_PRESETS = [
+@@ -451,6 +459,53 @@
+     emptyState.style.display = activeTrack().clips.length ? 'none' : 'grid';
+   }
+ 
++  function safeCssUrl(value) {
++    return String(value || '').replace(/["\n\r]/g, '');
++  }
++
++  function formatRulerTime(seconds) {
++    const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
++    const mins = Math.floor(totalSeconds / 60);
++    const secs = totalSeconds % 60;
++    return mins ? `${mins}:${String(secs).padStart(2, '0')}` : `0:${String(secs).padStart(2, '0')}`;
++  }
++
++  function renderTimelineRuler(total, pixelsPerSecond, width) {
++    if (!timelineRuler) return;
++    timelineRuler.replaceChildren();
++    const step = pixelsPerSecond >= 68 ? 1 : pixelsPerSecond >= 44 ? 2 : 5;
++    const minor = step === 1 ? .5 : step / 2;
++    for (let t = 0; t <= Math.max(total, 1) + minor; t += minor) {
++      const tick = document.createElement('span');
++      const major = Math.abs((t / step) - Math.round(t / step)) < .001;
++      tick.className = `ruler-tick${major ? ' major' : ''}`;
++      tick.style.left = `${t * pixelsPerSecond}px`;
++      if (major) tick.dataset.label = formatRulerTime(t);
++      timelineRuler.appendChild(tick);
++    }
++    timelineRuler.style.width = `${width}px`;
++  }
++
++  function updateTimelineStageMetrics(total) {
++    if (!timeline || !timelineStage) return { pixelsPerSecond: timelinePixelsPerSecond(), width: timeline.clientWidth || 1 };

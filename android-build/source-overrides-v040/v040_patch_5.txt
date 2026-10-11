@@ -1,0 +1,104 @@
++    const pixelsPerSecond = timelinePixelsPerSecond();
++    const width = Math.max(timeline.clientWidth - 2, Math.max(total, 1) * pixelsPerSecond + 20);
++    timelineStage.style.width = `${width}px`;
++    timelineClips.style.width = `${width}px`;
++    renderTimelineRuler(total, pixelsPerSecond, width);
++    return { pixelsPerSecond, width };
++  }
++
++  function keepPlayheadInView(force = false) {
++    if (!timeline || !timelineStage) return;
++    const x = projectTime * timelinePixelsPerSecond();
++    const leftGuard = timeline.scrollLeft + timeline.clientWidth * .2;
++    const rightGuard = timeline.scrollLeft + timeline.clientWidth * .78;
++    if (force || x < leftGuard || x > rightGuard) {
++      timeline.scrollTo({ left: Math.max(0, x - timeline.clientWidth * .38), behavior: force ? 'auto' : 'smooth' });
++    }
++  }
++
+   function renderMediaList() {
+     mediaCount.textContent = `${project.assets.length} asset${project.assets.length === 1 ? '' : 's'}`;
+     mediaList.replaceChildren();
+@@ -462,12 +517,15 @@
+       return;
+     }
+     project.assets.forEach((asset) => {
++      const runtime = runtimeForAsset(asset.id);
+       const button = document.createElement('button');
+       button.className = 'media-item';
+       button.type = 'button';
+       button.title = isResolved(asset.id) ? 'Add another instance of this asset to the timeline' : 'This asset needs its source file relinked';
+-      button.innerHTML = `<strong></strong><span><em>${fmt(asset.duration)}</em><em class="${isResolved(asset.id) ? 'linked' : 'missing'}">${isResolved(asset.id) ? 'linked' : 'missing'}</em></span>`;
++      button.innerHTML = `<span class="media-thumb"></span><span class="media-copy"><strong></strong><span class="media-meta"><em>${fmt(asset.duration)}</em><em class="${isResolved(asset.id) ? 'linked' : 'missing'}">${isResolved(asset.id) ? 'linked' : 'missing'}</em></span></span>`;
+       button.querySelector('strong').textContent = asset.name;
++      const thumb = button.querySelector('.media-thumb');
++      if (runtime?.thumbnail) thumb.style.backgroundImage = `url("${safeCssUrl(runtime.thumbnail)}")`;
+       button.addEventListener('click', () => {
+         if (!isResolved(asset.id)) {
+           alert(`Re-import ${asset.name} to relink this media.`);
+@@ -492,13 +550,17 @@
+     const total = Core.projectDuration(project);
+     timelineSummary.textContent = `${placements.length} clip${placements.length === 1 ? '' : 's'} · ${fmt(total)}`;
+     timelineClips.replaceChildren();
++    const { pixelsPerSecond } = updateTimelineStageMetrics(total);
+     placements.forEach((placement) => {
++      const runtime = runtimeForAsset(placement.clip.assetId);
+       const block = document.createElement('button');
+       block.type = 'button';
+-      block.className = `timeline-clip${placement.clip.id === selectedClipId ? ' selected' : ''}${isResolved(placement.clip.assetId) ? '' : ' missing'}`;
+-      block.style.flex = `${Math.max(placement.duration, 0.05)} 1 0`;
++      block.className = `timeline-clip${placement.clip.id === selectedClipId ? ' selected' : ''}${isResolved(placement.clip.assetId) ? '' : ' missing'}${placement.clip.overlay?.text ? ' has-text' : ''}`;
++      block.style.left = `${placement.start * pixelsPerSecond}px`;
++      block.style.width = `${Math.max(28, placement.duration * pixelsPerSecond)}px`;
++      if (runtime?.thumbnail) block.style.backgroundImage = `linear-gradient(90deg, rgba(2,8,16,.22), rgba(2,8,16,.44)), url("${safeCssUrl(runtime.thumbnail)}")`;
+       block.dataset.clipId = placement.clip.id;
+-      block.innerHTML = `<strong></strong><span>${fmt(placement.duration)} · ${placement.clip.speed}×</span>`;
++      block.innerHTML = `<span class="clip-type-badge">V</span>${placement.clip.overlay?.text ? '<span class="clip-overlay-badge">T</span>' : ''}<strong></strong><span class="clip-duration">${fmt(placement.duration)}</span>`;
+       block.querySelector('strong').textContent = placement.clip.name;
+       block.addEventListener('click', (event) => {
+         event.stopPropagation();
+@@ -514,6 +576,7 @@
+     });
+     scrubber.max = String(Math.max(total, 0.001));
+     durationLabel.textContent = fmt(total);
++    if (timelineZoomLabel) timelineZoomLabel.textContent = `${timelineZoomIndex + 1}×`;
+     updateTransportUI();
+   }
+ 
+@@ -522,8 +585,9 @@
+     projectTime = Core.clamp(projectTime, 0, total);
+     currentTimeLabel.textContent = fmt(projectTime);
+     scrubber.value = String(projectTime);
+-    const pct = total > 0 ? (projectTime / total) * 100 : 0;
+-    playhead.style.left = `${Core.clamp(pct, 0, 100)}%`;
++    if (timelineStage) playhead.style.left = `${projectTime * timelinePixelsPerSecond()}px`;
++    else playhead.style.left = `${total > 0 ? (projectTime / total) * 100 : 0}%`;
++    if (projectPlaying) keepPlayheadInView(false);
+   }
+ 
+   function clipDraftFromControls(baseClip) {
+@@ -1128,15 +1192,43 @@
+   async function probeVideoFile(file) {
+     const url = URL.createObjectURL(file);
+     const probe = document.createElement('video');
+-    probe.preload = 'metadata';
++    probe.preload = 'auto';
+     probe.muted = true;
++    probe.playsInline = true;
+     probe.src = url;
++    let thumbnail = '';
+     try {
+       await waitForEvent(probe, 'loadedmetadata');
+       const duration = Number(probe.duration);
+       if (!Number.isFinite(duration) || duration <= 0) throw new Error(`Could not read duration for ${file.name}`);
++      try {
++        if (probe.readyState < 2) await waitForEvent(probe, 'loadeddata');
++        const target = Core.clamp(duration * .22, .05, Math.max(.05, duration - .05));
++        if (Math.abs(probe.currentTime - target) > .03) {
++          const seeked = waitForEvent(probe, 'seeked');
++          probe.currentTime = target;
++          await seeked;
++        }
++        if (probe.videoWidth && probe.videoHeight) {
++          const canvas = document.createElement('canvas');
++          const ratio = probe.videoWidth / probe.videoHeight;

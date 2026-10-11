@@ -1,0 +1,91 @@
+-      <button type="button" data-mobile-sheet="media"><span>＋</span><em>Media</em></button>
+-      <button type="button" data-mobile-action="split"><span>✂</span><em>Split</em></button>
+-      <button type="button" data-mobile-tool="trim"><span>↔</span><em>Trim</em></button>
+-      <button type="button" data-mobile-tool="text"><span>T</span><em>Text</em></button>
+-      <button type="button" data-mobile-tool="adjust"><span>◐</span><em>Adjust</em></button>
+-      <button type="button" data-mobile-tool="audio"><span>♪</span><em>Audio</em></button>
+-      <button type="button" data-mobile-sheet="project"><span>•••</span><em>More</em></button>
++      <button type="button" data-mobile-sheet="media">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m6 16 4-4 3 3 2-2 3 3"/><path d="M12 8h.01"/></svg></span><em>Media</em>
++      </button>
++      <button type="button" data-mobile-tool="trim">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M4 17h11M8 4v6M12 14v6"/><path d="m16 9 4 3-4 3"/></svg></span><em>Edit</em>
++      </button>
++      <button type="button" data-mobile-tool="audio">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></span><em>Audio</em>
++      </button>
++      <button type="button" data-mobile-tool="text">
++        <span class="dock-icon text-icon">T</span><em>Text</em>
++      </button>
++      <button type="button" data-mobile-tool="adjust">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg></span><em>Adjust</em>
++      </button>
++      <button type="button" data-mobile-sheet="project">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span><em>More</em>
++      </button>
+     </nav>
+ 
+     <footer class="footer-note">
+-      v0.3.0 introduces the professional adaptive Studio workspace in landscape while preserving the repaired portrait cinema editor, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
++      v0.4.0 introduces the Cutroom mobile workspace: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
+     </footer>
+   </div>
+ 
+--- a/android-build/app/src/main/assets/styles.css
++++ b/android-build/app/src/main/assets/styles.css
+@@ -567,3 +567,249 @@
+   .top-actions .button { min-height: 29px; padding: 4px 7px; }
+   .brand { font-size: 15px; }
+ }
++
++
++/* v0.4.0 Cutroom mobile UI — original Cre8torCut portrait workspace, benchmarked against modern mobile NLE patterns. */
++:root {
++  --cut-accent: #2bb8ff;
++  --cut-accent-strong: #0ea5e9;
++  --cut-accent-soft: #7dd3fc;
++  --cut-surface: #0b1017;
++  --cut-surface-2: #101823;
++  --cut-line: #202c3a;
++}
++
++.brand { display: flex; align-items: center; gap: 8px; }
++.brand-mark {
++  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 9px;
++  background: linear-gradient(145deg, #2bb8ff, #0c76d7); color: #fff; font-size: 14px; font-weight: 950;
++  letter-spacing: -.05em; box-shadow: 0 8px 22px rgba(43,184,255,.18);
++}
++.brand-name { min-width: 0; }
++.top-command svg, .timeline-tool svg, .dock-icon svg, .preview-fullscreen svg {
++  width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
++}
++.top-command svg circle, .dock-icon svg circle { fill: currentColor; stroke: none; }
++.mobile-export-label { display: none; }
++.mobile-edit-shortcuts { display: none; }
++.timeline-toolbar { display: none; }
++.timeline-stage { position: relative; min-width: 100%; height: 100%; }
++.timeline-ruler { position: absolute; top: 0; left: 0; height: 24px; border-bottom: 1px solid #263246; z-index: 1; }
++.ruler-tick { position: absolute; bottom: 0; width: 1px; height: 5px; background: #43516a; }
++.ruler-tick.major { height: 9px; background: #7f8ea6; }
++.ruler-tick.major::after { content: attr(data-label); position: absolute; left: 4px; bottom: 8px; color: #8290a4; font-size: 8px; white-space: nowrap; }
++
++@media (orientation: portrait) and (max-width: 680px) {
++  :root {
++    --bg: #05080d; --panel: #0b1017; --panel2: #101823; --line: #202c3a; --text: #f6f8fb; --muted: #8695a8;
++    --accent: var(--cut-accent); --accent2: var(--cut-accent-soft);
++  }
++  html, body { width: 100%; height: 100%; min-height: 100%; background: #05080d; overflow: hidden; }
++  body { overscroll-behavior: none; }
++  .app-shell {
++    width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; gap: 0;
++    display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: 50px minmax(0,1fr) 214px 68px;
++    grid-template-areas: "topbar" "viewer" "timeline" "dock"; overflow: hidden; background: #05080d;
++  }
++  .workspace { display: contents; }
++  .topbar {
++    grid-area: topbar; min-width: 0; margin: 0; padding: max(7px, env(safe-area-inset-top)) 10px 7px; border: 0;
++    border-bottom: 1px solid #19222f; border-radius: 0; background: rgba(8,11,16,.985);
++    display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; box-shadow: none; z-index: 120;
++  }
++  .topbar > div:first-child { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; }
++  .brand { min-width: 0; gap: 7px; font-size: 14px; line-height: 1; letter-spacing: -.025em; }

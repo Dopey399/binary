@@ -1,0 +1,103 @@
++          canvas.width = 240;
++          canvas.height = Math.max(72, Math.round(240 / Math.max(.5, Math.min(2.4, ratio))));
++          const tctx = canvas.getContext('2d');
++          tctx.fillStyle = '#000';
++          tctx.fillRect(0, 0, canvas.width, canvas.height);
++          const scale = Math.max(canvas.width / probe.videoWidth, canvas.height / probe.videoHeight);
++          const dw = probe.videoWidth * scale;
++          const dh = probe.videoHeight * scale;
++          tctx.drawImage(probe, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
++          thumbnail = canvas.toDataURL('image/jpeg', .72);
++        }
++      } catch (thumbError) {
++        console.warn('Thumbnail generation skipped', thumbError);
++      }
+       return {
+         url,
++        thumbnail,
+         meta: {
+           name: file.name,
+           type: file.type || 'video/unknown',
+@@ -1174,17 +1266,17 @@
+     let lastClipId = selectedClipId;
+     for (const file of list) {
+       try {
+-        const { url, meta } = await probeVideoFile(file);
++        const { url, meta, thumbnail } = await probeVideoFile(file);
+         const unresolved = next.assets.find((asset) => !runtimeAssets.has(asset.id) && asset.name === meta.name && (!asset.size || asset.size === meta.size));
+         if (unresolved) {
+-          runtimeAssets.set(unresolved.id, { file, url, ...meta });
++          runtimeAssets.set(unresolved.id, { file, url, thumbnail, ...meta });
+           continue;
+         }
+         const existing = next.assets.find((asset) => assetKey(asset) === assetKey(meta));
+         if (existing) {
+           const priorRuntime = runtimeAssets.get(existing.id);
+           if (priorRuntime && priorRuntime.url !== url) URL.revokeObjectURL(priorRuntime.url);
+-          runtimeAssets.set(existing.id, { file, url, ...meta });
++          runtimeAssets.set(existing.id, { file, url, thumbnail, ...meta });
+           const appended = Core.appendClip(next, existing.id);
+           next = appended.project;
+           lastClipId = appended.clipId;
+@@ -1192,7 +1284,7 @@
+         } else {
+           const added = Core.addAsset(next, meta);
+           next = added.project;
+-          runtimeAssets.set(added.assetId, { file, url, ...meta });
++          runtimeAssets.set(added.assetId, { file, url, thumbnail, ...meta });
+           lastClipId = added.clipId;
+           mutated = true;
+         }
+@@ -1456,10 +1548,10 @@
+ 
+   timeline.addEventListener('click', (event) => {
+     if (!activeTrack().clips.length || event.target.closest('.timeline-clip')) return;
+-    const rect = timeline.getBoundingClientRect();
+-    const ratio = Core.clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
++    const rect = (timelineStage || timeline).getBoundingClientRect();
++    const seconds = Core.clamp((event.clientX - rect.left) / timelinePixelsPerSecond(), 0, Core.projectDuration(project));
+     pausePlayback();
+-    seekProject(ratio * Core.projectDuration(project)).catch(console.error);
++    seekProject(seconds).catch(console.error);
+   });
+ 
+   $('previousClipBtn').addEventListener('click', () => {
+@@ -1613,6 +1705,25 @@
+     setProject(next, { record: true });
+   });
+ 
++  timelineZoomBtn?.addEventListener('click', () => {
++    timelineZoomIndex = (timelineZoomIndex + 1) % TIMELINE_ZOOM_LEVELS.length;
++    renderTimeline();
++    keepPlayheadInView(true);
++  });
++
++  $('fullscreenBtn')?.addEventListener('click', async () => {
++    try {
++      if (!document.fullscreenElement) await dropZone.requestFullscreen?.();
++      else await document.exitFullscreen?.();
++    } catch (err) {
++      console.warn('Fullscreen unavailable', err);
++    }
++  });
++
++  $('mobileMoreBtn')?.addEventListener('click', () => openMobileProject($('mobileMoreBtn')));
++  $('mobileSplitToolBtn')?.addEventListener('click', () => $('splitBtn').click());
++  $('mobileDeleteToolBtn')?.addEventListener('click', () => $('deleteClipBtn').click());
++
+   if (mobileDock) {
+     mobileDock.addEventListener('click', (event) => {
+       const button = event.target.closest('button');
+@@ -1667,6 +1778,12 @@
+   if (mobileQuery.addEventListener) mobileQuery.addEventListener('change', handleMobileViewport);
+   else if (mobileQuery.addListener) mobileQuery.addListener(handleMobileViewport);
+ 
++  let resizeTimer = 0;
++  window.addEventListener('resize', () => {
++    clearTimeout(resizeTimer);
++    resizeTimer = setTimeout(() => { renderTimeline(); keepPlayheadInView(true); }, 120);
++  });
++
+   window.addEventListener('keydown', (event) => {
+     const tag = document.activeElement?.tagName?.toLowerCase();
+     const editingText = tag === 'input' || tag === 'select' || tag === 'textarea';
