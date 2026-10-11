@@ -17,7 +17,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d android-build/source-assets/v0210.b64 > /tmp/cre8torcut-v0210.tar.xz
+          cat \
+            android-build/source-assets/v0210_0.b64 \
+            android-build/source-assets/v0210_1.b64 \
+            android-build/source-assets/v0210_2.b64 \
+            android-build/source-assets/v0210_3.b64 \
+            android-build/source-assets/v0210_4.b64 \
+            android-build/source-assets/v0210_5.b64 \
+            > /tmp/cre8torcut-v0210.tar.xz.b64
+          base64 -d /tmp/cre8torcut-v0210.tar.xz.b64 > /tmp/cre8torcut-v0210.tar.xz
           echo '3c7ab96b48d8f5160d80e8d0578419adbc19b5e9251da4f33e68167ae5077cfa  /tmp/cre8torcut-v0210.tar.xz' | sha256sum -c -
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
