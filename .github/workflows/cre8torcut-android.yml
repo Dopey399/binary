@@ -22,7 +22,10 @@ jobs:
             android-build/source-assets/part01.b64 \
             android-build/source-assets/part02a.b64 \
             android-build/source-assets/part02b.b64 \
-            android-build/source-assets/part02c.b64 \
+            android-build/source-assets/part02c0.b64 \
+            android-build/source-assets/part02c1.b64 \
+            android-build/source-assets/part02c2.b64 \
+            android-build/source-assets/part02c3.b64 \
             android-build/source-assets/part03.b64 \
             android-build/source-assets/part04.b64 \
             > /tmp/cre8torcut-assets.tgz.b64
