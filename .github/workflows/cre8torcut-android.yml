@@ -13,26 +13,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact Cre8torCut v0.2.8 assets
+      - name: Restore exact Cre8torCut v0.2.9 assets
         shell: bash
         run: |
           set -euo pipefail
           cat \
-            android-build/source-assets/v028_0.b64 \
-            android-build/source-assets/v028_1.b64 \
-            android-build/source-assets/v028_2.b64 \
-            android-build/source-assets/v028_3.b64 \
-            > /tmp/cre8torcut-assets.tgz.b64
-          base64 -d /tmp/cre8torcut-assets.tgz.b64 > /tmp/cre8torcut-assets.tgz
-          echo '456a97ec63ebf841da305ccdccf3b51d52a33ad54e56f140fbb726bebc366d8a  /tmp/cre8torcut-assets.tgz' | sha256sum -c -
+            android-build/source-assets/v029x_0.b64 \
+            android-build/source-assets/v029x_1.b64 \
+            android-build/source-assets/v029x_2.b64 \
+            android-build/source-assets/v029x_3.b64 \
+            > /tmp/cre8torcut-v029.tar.xz.b64
+          base64 -d /tmp/cre8torcut-v029.tar.xz.b64 > /tmp/cre8torcut-v029.tar.xz
+          echo 'e61efec6a4591afaf3f3d318fa0d1a0c9226a0418170bc97eb5fdfe6964757e4  /tmp/cre8torcut-v029.tar.xz' | sha256sum -c -
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
-          tar -xzf /tmp/cre8torcut-assets.tgz -C android-build/app/src/main/assets
+          xz -dc /tmp/cre8torcut-v029.tar.xz | tar -xf - -C android-build/app/src/main/assets
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          cb4f1767b562c48c6876d4f1e9a09a22976ce46b555b22bf81eed47a8b16e0f6  android-build/app/src/main/assets/index.html
-          cc700e6bf8d4c4313b8ece6d008868d94743daa06447c5ba4389f9b5d3e0e7f6  android-build/app/src/main/assets/styles.css
-          5b71abe7e077300d2debed34601267bf372750e68e1263f54700004aaaa89601  android-build/app/src/main/assets/editor-core.js
-          b58d26757e14babc56c63f04e68e813e537e21da8cca50749ac038744bb00a0f  android-build/app/src/main/assets/app.js
+          7b7af5a780394a317e3a8732b85cf6c9964ae28942ac755f08b65136abd4fd72  android-build/app/src/main/assets/index.html
+          38b36cf6a4cbe600fb137f7e711202ba9dfda323b987f4b8da81c09ee059b897  android-build/app/src/main/assets/styles.css
+          dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  android-build/app/src/main/assets/editor-core.js
+          3a6d07e409b273ce234003efe980fcce52127bf8962ddf46f70822c7a936fae6  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
@@ -40,19 +40,31 @@ jobs:
           node --check android-build/app/src/main/assets/editor-core.js
           grep -q 'id="mobileDock"' android-build/app/src/main/assets/index.html
           grep -q 'data-mobile-sheet="project"' android-build/app/src/main/assets/index.html
-          grep -q 'grid-template-columns: repeat(7' android-build/app/src/main/assets/styles.css
-          grep -q 'function openMobileProject' android-build/app/src/main/assets/app.js
           grep -q 'id="textStyleBtn"' android-build/app/src/main/assets/index.html
+          grep -q 'id="textStyleFeatured"' android-build/app/src/main/assets/index.html
+          grep -q 'id="textAnimationBtn"' android-build/app/src/main/assets/index.html
+          grep -q 'id="textAnimationFeatured"' android-build/app/src/main/assets/index.html
           grep -q 'id="textZ"' android-build/app/src/main/assets/index.html
-          grep -q "style: 'clean-bold'" android-build/app/src/main/assets/editor-core.js
+          grep -q 'id="textAnimationDuration"' android-build/app/src/main/assets/index.html
+          grep -q 'id="textAnimationIntensity"' android-build/app/src/main/assets/index.html
+          grep -q 'buildTextStyleLibrary();' android-build/app/src/main/assets/app.js
+          grep -q 'buildTextAnimationLibrary();' android-build/app/src/main/assets/app.js
+          grep -q 'drawFrame(exportedTime);' android-build/app/src/main/assets/app.js
+          grep -q "animation: 'none'" android-build/app/src/main/assets/editor-core.js
           python3 - <<'PY'
           import re
           from pathlib import Path
           text = Path('android-build/app/src/main/assets/app.js').read_text()
-          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", text)
+          styles_block = text.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0]
+          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", styles_block)
           assert len(styles) == 50, f'expected 50 text styles, found {len(styles)}'
           assert len({sid for sid, _ in styles}) == 50, 'duplicate style ids'
+          animations_block = text.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0]
+          animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", animations_block)
+          assert len(animations) == 24, f'expected 24 text animations, found {len(animations)}'
+          assert len({aid for aid, _ in animations}) == 24, 'duplicate animation ids'
           print('Text style preset count: PASS (50)')
+          print('Text animation preset count: PASS (24)')
           PY
           grep -q 'WindowInsets.Type.navigationBars()' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
           grep -q 'BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
@@ -90,10 +102,10 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'SUMS'
-          cb4f1767b562c48c6876d4f1e9a09a22976ce46b555b22bf81eed47a8b16e0f6  /tmp/apk-assets/assets/index.html
-          cc700e6bf8d4c4313b8ece6d008868d94743daa06447c5ba4389f9b5d3e0e7f6  /tmp/apk-assets/assets/styles.css
-          5b71abe7e077300d2debed34601267bf372750e68e1263f54700004aaaa89601  /tmp/apk-assets/assets/editor-core.js
-          b58d26757e14babc56c63f04e68e813e537e21da8cca50749ac038744bb00a0f  /tmp/apk-assets/assets/app.js
+          7b7af5a780394a317e3a8732b85cf6c9964ae28942ac755f08b65136abd4fd72  /tmp/apk-assets/assets/index.html
+          38b36cf6a4cbe600fb137f7e711202ba9dfda323b987f4b8da81c09ee059b897  /tmp/apk-assets/assets/styles.css
+          dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  /tmp/apk-assets/assets/editor-core.js
+          3a6d07e409b273ce234003efe980fcce52127bf8962ddf46f70822c7a936fae6  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
@@ -101,6 +113,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.2.8-text-styles
+          name: cre8torcut-v0.2.9-text-motion
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
