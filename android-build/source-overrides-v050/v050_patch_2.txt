@@ -252,4 +252,4 @@
 +          }
 +          if (best && best.score < 85000) {
 +            const follow = .34 + .22 * Math.min(1, p.intensity);
-+        
++       
