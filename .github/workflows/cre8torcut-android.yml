@@ -13,52 +13,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore Cre8torCut assets and apply Android fixes
+      - name: Restore exact Cre8torCut v0.2.6 assets
         shell: bash
         run: |
           set -euo pipefail
           cat android-build/source-assets/part*.b64 > /tmp/cre8torcut-assets.tgz.b64
           base64 -d /tmp/cre8torcut-assets.tgz.b64 > /tmp/cre8torcut-assets.tgz
-          echo '8a23a7304d372480dbaf42529b8d3852dde1646d04bf620bb71f65fd196b1ee1  /tmp/cre8torcut-assets.tgz' | sha256sum -c -
+          echo '7900543a47e413155bdf06c1c497434b101b139fe8c9d7ed9a727b3f78853786  /tmp/cre8torcut-assets.tgz' | sha256sum -c -
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
           tar -xzf /tmp/cre8torcut-assets.tgz -C android-build/app/src/main/assets
-          python3 - <<'PY'
-          from pathlib import Path
-
-          app = Path('android-build/app/src/main/assets/app.js')
-          s = app.read_text()
-          old = "const list = [...files].filter((file) => file && file.type.startsWith('video/'));"
-          new = """const list = [...files].filter((file) => {
-                if (!file) return false;
-                const type = String(file.type || '').toLowerCase();
-                if (type.startsWith('video/')) return true;
-                const name = String(file.name || '').toLowerCase();
-                return /\\.(mp4|m4v|mov|webm|mkv|avi|3gp|3g2|mpeg|mpg|ogv|ts|mts|m2ts)$/.test(name);
-              });"""
-          if old not in s:
-              raise SystemExit('expected v0.2 media filter line not found')
-          app.write_text(s.replace(old, new))
-
-          css = Path('android-build/app/src/main/assets/styles.css')
-          s = css.read_text()
-          marker = '* { box-sizing: border-box; }\n'
-          rule = '[hidden] { display: none !important; }\n'
-          if rule not in s:
-              if marker not in s:
-                  raise SystemExit('styles insertion point not found')
-              s = s.replace(marker, marker + rule, 1)
-          css.write_text(s)
-          PY
-          cat > /tmp/cre8torcut-assets.sha256 <<'EOF'
-          c8668b1e00fabd5f7b67b10113e8e1bbfbae0a423112fe280c8b3debe4ba3649  android-build/app/src/main/assets/index.html
-          df2d892cdd8816081363ae679bf0f05d6134942ce2a60edd730319c988ab0c27  android-build/app/src/main/assets/styles.css
+          cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
+          45003fcfdbf5aa8e50fe25a2a5478b04feaa1858820140f478343fc4425197a5  android-build/app/src/main/assets/index.html
+          5677c84c3b3230d8e615186c3739c820a399c74c5e97be65522e70b7d256045f  android-build/app/src/main/assets/styles.css
           bffcda9ff510c9eef2a9611c09c0650557c19635a15616b53d4b50db9c0780c2  android-build/app/src/main/assets/editor-core.js
-          ec41e7103d40bc5c4d8eeab08aafd8c105b7f44273ec536faba8dc780f6788f9  android-build/app/src/main/assets/app.js
-          EOF
+          0e37afba08ad9c15dcade5778935680e09603a650afe668048694b998e9228c4  android-build/app/src/main/assets/app.js
+          SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
           node --check android-build/app/src/main/assets/app.js
+          node --check android-build/app/src/main/assets/editor-core.js
+          grep -q 'id="mobileDock"' android-build/app/src/main/assets/index.html
+          grep -q 'grid-template-areas: "topbar" "project" "viewer" "timeline" "dock"' android-build/app/src/main/assets/styles.css
+          grep -q 'function openMobileTool' android-build/app/src/main/assets/app.js
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -93,18 +70,18 @@ jobs:
           PY
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
-          cat > /tmp/final-assets.sha256 <<'EOF'
-          c8668b1e00fabd5f7b67b10113e8e1bbfbae0a423112fe280c8b3debe4ba3649  /tmp/apk-assets/assets/index.html
-          df2d892cdd8816081363ae679bf0f05d6134942ce2a60edd730319c988ab0c27  /tmp/apk-assets/assets/styles.css
+          cat > /tmp/final-assets.sha256 <<'SUMS'
+          45003fcfdbf5aa8e50fe25a2a5478b04feaa1858820140f478343fc4425197a5  /tmp/apk-assets/assets/index.html
+          5677c84c3b3230d8e615186c3739c820a399c74c5e97be65522e70b7d256045f  /tmp/apk-assets/assets/styles.css
           bffcda9ff510c9eef2a9611c09c0650557c19635a15616b53d4b50db9c0780c2  /tmp/apk-assets/assets/editor-core.js
-          ec41e7103d40bc5c4d8eeab08aafd8c105b7f44273ec536faba8dc780f6788f9  /tmp/apk-assets/assets/app.js
-          EOF
+          0e37afba08ad9c15dcade5778935680e09603a650afe668048694b998e9228c4  /tmp/apk-assets/assets/app.js
+          SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.2.5-android-overlay-fix
+          name: cre8torcut-v0.2.6-mobile-workspace
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
