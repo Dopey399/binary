@@ -1,0 +1,244 @@
+     state.x += (best.x - state.x) * follow;
++            state.y += (best.y - state.y) * follow;
++          }
++        } catch (_) {}
++      }
++    } else {
++      state.x = baseX;
++      state.y = baseY;
++    }
++    state.lastTime = renderProjectTime;
++    state.history.push({ x: state.x, y: state.y, t: renderProjectTime });
++    if (state.history.length > 20) state.history.splice(0, state.history.length - 20);
++    return { x: state.x, y: state.y, radius: Math.min(g.w, g.h) * (Core.clamp(Number(effects.targetSize) || 12, 2, 40) / 100) };
++  }
++
++  function drawSphereEffect(clip, g, renderProjectTime, p) {
++    const target = sphereTargetForFrame(clip, g, renderProjectTime, p);
++    const { x, y, radius } = target;
++    const pulse = .78 + .22 * Math.sin(p.t * Math.PI * 4);
++    const alpha = p.blend * (.5 + .45 * p.intensity);
++    ctx.save();
++    ctx.lineCap = 'round';
++    if (p.id === 'sphere-trail') {
++      const state = runtimeFxTargets.get(clip.id);
++      const hist = state?.history || [];
++      ctx.lineWidth = Math.max(2, radius * .18);
++      for (let i = 1; i < hist.length; i += 1) {
++        ctx.globalAlpha = alpha * (i / hist.length) * .45;
++        ctx.strokeStyle = i % 2 ? '#38bdf8' : '#a78bfa';
++        ctx.beginPath();
++        ctx.moveTo(hist[i - 1].x, hist[i - 1].y);
++        ctx.lineTo(hist[i].x, hist[i].y);
++        ctx.stroke();
++      }
++    }
++    if (p.id === 'sphere-lock-on' || p.id === 'sphere-target') {
++      ctx.strokeStyle = p.id === 'sphere-lock-on' ? '#facc15' : '#38bdf8';
++      ctx.lineWidth = Math.max(2, radius * .08);
++      ctx.globalAlpha = alpha;
++      const r = radius * 1.35;
++      const corner = r * .42;
++      [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx,sy]) => {
++        ctx.beginPath();
++        ctx.moveTo(x + sx * r, y + sy * (r - corner));
++        ctx.lineTo(x + sx * r, y + sy * r);
++        ctx.lineTo(x + sx * (r - corner), y + sy * r);
++        ctx.stroke();
++      });
++      ctx.beginPath(); ctx.arc(x, y, radius * .3, 0, Math.PI * 2); ctx.stroke();
++    }
++    if (p.id === 'sphere-spark') {
++      const frame = Math.floor(p.t * 24);
++      ctx.strokeStyle = '#e0f2fe';
++      ctx.shadowColor = '#38bdf8';
++      ctx.shadowBlur = 12;
++      for (let i = 0; i < 14; i += 1) {
++        const a = fxRand(i, frame, 111) * Math.PI * 2;
++        const inner = radius * (1 + fxRand(i, frame, 112) * .25);
++        const outer = inner + radius * (.3 + fxRand(i, frame, 113) * .7 * p.intensity);
++        ctx.globalAlpha = alpha * (.35 + fxRand(i, frame, 114) * .65);
++        ctx.beginPath();
++        ctx.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
++        ctx.lineTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer);
++        ctx.stroke();
++      }
++    }
++    if (p.id === 'sphere-shockwave') {
++      const cycle = (p.t * .8) % 1;
++      ctx.strokeStyle = '#7dd3fc';
++      ctx.lineWidth = Math.max(2, radius * .08 * (1 - cycle));
++      ctx.globalAlpha = alpha * (1 - cycle);
++      ctx.beginPath(); ctx.arc(x, y, radius * (1.1 + cycle * 3.2), 0, Math.PI * 2); ctx.stroke();
++    }
++    if (p.id === 'sphere-energy-ring' || p.id === 'sphere-halo') {
++      const grad = ctx.createRadialGradient(x, y, radius * .55, x, y, radius * 1.9);
++      grad.addColorStop(0, 'rgba(56,189,248,0)');
++      grad.addColorStop(.55, `rgba(56,189,248,${.22 * alpha})`);
++      grad.addColorStop(.72, `rgba(167,139,250,${.52 * alpha})`);
++      grad.addColorStop(1, 'rgba(56,189,248,0)');
++      ctx.fillStyle = grad;
++      ctx.globalAlpha = 1;
++      ctx.beginPath(); ctx.arc(x, y, radius * 1.9, 0, Math.PI * 2); ctx.fill();
++    }
++    if (p.id === 'sphere-boost-aura') {
++      ctx.globalCompositeOperation = 'screen';
++      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.6);
++      grad.addColorStop(0, `rgba(255,255,255,${.38 * alpha})`);
++      grad.addColorStop(.22, `rgba(34,211,238,${.38 * alpha})`);
++      grad.addColorStop(.58, `rgba(59,130,246,${.18 * alpha})`);
++      grad.addColorStop(1, 'rgba(59,130,246,0)');
++      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, radius * 2.6, 0, Math.PI * 2); ctx.fill();
++      drawSpeedLines(g.w, g.h, { ...p, intensity: p.intensity * .45, blend: p.blend * .5 }, '#67e8f9');
++    }
++    if (['sphere-glow','sphere-pulse','sphere-halo','sphere-energy-ring','sphere-trail'].includes(p.id)) {
++      const rr = radius * (p.id === 'sphere-pulse' ? (1.2 + .35 * pulse * p.intensity) : 1.35);
++      ctx.globalCompositeOperation = 'screen';
++      const grad = ctx.createRadialGradient(x, y, radius * .18, x, y, rr * 1.7);
++      grad.addColorStop(0, `rgba(255,255,255,${.5 * alpha})`);
++      grad.addColorStop(.32, `rgba(56,189,248,${.42 * alpha})`);
++      grad.addColorStop(.7, `rgba(99,102,241,${.18 * alpha})`);
++      grad.addColorStop(1, 'rgba(99,102,241,0)');
++      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(x, y, rr * 1.7, 0, Math.PI * 2); ctx.fill();
++      ctx.globalCompositeOperation = 'source-over';
++      ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = Math.max(2, radius * .055); ctx.globalAlpha = alpha;
++      ctx.beginPath(); ctx.arc(x, y, radius * (1.02 + .08 * pulse), 0, Math.PI * 2); ctx.stroke();
++    }
++    ctx.restore();
++  }
++
++  function drawVideoEffectOverlay(clip, g, renderProjectTime) {
++    const p = fxParams(clip, renderProjectTime);
++    if (p.id === 'none' || p.blend <= 0 || p.intensity <= 0) return;
++    const w = g.w, h = g.h;
++    const frame = Math.floor(p.t * 24);
++
++    if (isSphereEffect(p.id)) {
++      drawSphereEffect(clip, g, renderProjectTime, p);
++      return;
++    }
++
++    if (p.id === 'static-burst' || p.id === 'tv-snow') drawNoise(w, h, p, true, p.id === 'tv-snow' ? 360 : 220);
++    if (['vhs-dirty','vhs-tracking','crt-scanlines','old-tv','hologram'].includes(p.id)) drawScanlines(w, h, (.08 + .18 * p.intensity) * p.blend, p.id === 'crt-scanlines' ? 3 : 5);
++    if (['old-tv','retro-film','noir-film','vhs-dirty'].includes(p.id)) drawVignette(w, h, .35 + .18 * p.intensity);
++    if (p.id === 'vhs-dirty' || p.id === 'retro-film' || p.id === 'dust-scratches') drawNoise(w, h, { ...p, intensity: p.intensity * .55 }, true, 120);
++
++    if (p.id === 'rgb-split') {
++      const shift = Math.min(w, h) * .012 * p.intensity;
++      drawVideoSourceLayer(clip, g, { dx: -shift, alpha: .2 * p.blend, composite: 'screen', filter: 'sepia(1) saturate(7) hue-rotate(305deg)' });
++      drawVideoSourceLayer(clip, g, { dx: shift, alpha: .2 * p.blend, composite: 'screen', filter: 'sepia(1) saturate(7) hue-rotate(145deg)' });
++    }
++
++    if (p.id === 'vhs-tracking' || p.id === 'signal-loss' || p.id === 'digital-glitch') {
++      const bands = p.id === 'digital-glitch' ? 10 : 5;
++      for (let i = 0; i < bands; i += 1) {
++        const y = fxRand(i, frame, 11) * h;
++        const bh = Math.max(3, fxRand(i, frame, 12) * h * .08);
++        const dx = (fxRand(i, frame, 13) - .5) * w * .1 * p.intensity;
++        drawBandLayer(clip, g, y, bh, dx, { alpha: (.22 + .28 * p.intensity) * p.blend, effectId: p.id });
++      }
++    }
++
++    if (p.id === 'data-corruption' || p.id === 'pixel-smash') {
++      ctx.save();
++      ctx.globalAlpha = (.18 + .26 * p.intensity) * p.blend;
++      const blocks = p.id === 'pixel-smash' ? 44 : 28;
++      for (let i = 0; i < blocks; i += 1) {
++        const bw = (p.id === 'pixel-smash' ? 12 : 6) + fxRand(i, frame, 15) * w * .09;
++        const bh = 4 + fxRand(i, frame, 16) * h * .07;
++        ctx.fillStyle = `hsla(${Math.floor(fxRand(i, frame, 17) * 360)} 90% 60% / ${.25 + fxRand(i, frame, 18) * .55})`;
++        ctx.fillRect(fxRand(i, frame, 19) * w, fxRand(i, frame, 20) * h, bw, bh);
++      }
++      ctx.restore();
++    }
++
++    if (p.id === 'glitch-flash' || p.id === 'freeze-flash' || p.id === 'nitro-flash') {
++      const trigger = fxRand(0, frame, 70) > (p.id === 'freeze-flash' ? .83 : .72);
++      if (trigger) {
++        ctx.save();
++        ctx.globalAlpha = (.18 + .35 * p.intensity) * p.blend;
++        ctx.fillStyle = p.id === 'nitro-flash' ? '#67e8f9' : '#ffffff';
++        ctx.fillRect(0, 0, w, h);
++        ctx.restore();
++      }
++    }
++
++    if (p.id === 'fire-edge') drawFire(w, h, p, true);
++    if (p.id === 'burning-frame' || p.id === 'ember-drift') drawFire(w, h, { ...p, intensity: p.id === 'ember-drift' ? p.intensity * .6 : p.intensity }, false);
++
++    if (p.id === 'heatwave') {
++      for (let i = 0; i < 13; i += 1) {
++        const y = (i / 13) * h;
++        const dx = Math.sin(p.t * 5 + i * .7) * w * .012 * p.intensity;
++        drawBandLayer(clip, g, y, h / 12 + 2, dx, { alpha: .2 * p.blend, effectId: p.id });
++      }
++    }
++
++    if (p.id === 'plasma-glow' || p.id === 'neon-surge' || p.id === 'dream-bloom' || p.id === 'cyberpunk-glow' || p.id === 'toxic-glow') {
++      ctx.save();
++      ctx.globalCompositeOperation = 'screen';
++      const colors = p.id === 'toxic-glow' ? ['#84cc16','#22c55e'] : p.id === 'cyberpunk-glow' ? ['#22d3ee','#ec4899'] : ['#22d3ee','#8b5cf6'];
++      for (let i = 0; i < 3; i += 1) {
++        const x = (0.25 + .5 * fxRand(i, frame, 60)) * w;
++        const y = (0.2 + .6 * fxRand(i, frame, 61)) * h;
++        const r = Math.max(w, h) * (.24 + fxRand(i, frame, 62) * .2);
++        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
++        grad.addColorStop(0, `${colors[i % colors.length]}66`);
++        grad.addColorStop(1, 'rgba(0,0,0,0)');
++        ctx.globalAlpha = (.08 + .12 * p.intensity) * p.blend;
++        ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
++      }
++      ctx.restore();
++    }
++
++    if (p.id === 'electric-arc' || p.id === 'lightning-flicker') drawLightning(w, h, p, p.id === 'electric-arc' ? '#67e8f9' : '#ffffff', p.id === 'electric-arc' ? 2 : 1);
++
++    if (p.id === 'energy-pulse' || p.id === 'shockwave') {
++      const cycle = (p.t * (p.id === 'shockwave' ? 1.1 : .72)) % 1;
++      ctx.save();
++      ctx.globalAlpha = (1 - cycle) * p.blend * (.35 + .35 * p.intensity);
++      ctx.strokeStyle = p.id === 'shockwave' ? '#f8fafc' : '#38bdf8';
++      ctx.lineWidth = Math.max(2, Math.min(w, h) * .009 * (1 - cycle));
++      ctx.beginPath(); ctx.arc(w / 2, h / 2, Math.min(w, h) * (.08 + cycle * .62), 0, Math.PI * 2); ctx.stroke();
++      ctx.restore();
++    }
++
++    if (['speed-lines','turbo-boost','warp-rush','drift-burst'].includes(p.id)) drawSpeedLines(w, h, p, p.id === 'drift-burst' ? '#f8fafc' : '#dbeafe');
++
++    if (p.id === 'motion-trails' || p.id === 'velocity-blur') {
++      const copies = p.id === 'velocity-blur' ? 7 : 4;
++      for (let i = 1; i <= copies; i += 1) {
++        const sign = i % 2 ? -1 : 1;
++        const dx = sign * i * Math.min(w, h) * .012 * p.intensity;
++        drawVideoSourceLayer(clip, g, { dx, alpha: (.07 + .04 * (copies - i)) * p.blend, composite: 'screen', effectId: p.id });
++      }
++    }
++
++    if (p.id === 'dust-scratches') {
++      ctx.save(); ctx.strokeStyle = '#fff'; ctx.globalAlpha = .16 * p.intensity * p.blend; ctx.lineWidth = 1;
++      for (let i = 0; i < 10; i += 1) {
++        const x = fxRand(i, frame, 80) * w;
++        ctx.beginPath(); ctx.moveTo(x, fxRand(i, frame, 81) * h); ctx.lineTo(x + (fxRand(i, frame, 82) - .5) * 6, h); ctx.stroke();
++      }
++      ctx.restore();
++    }
++
++    if (p.id === 'hologram') {
++      ctx.save();
++      ctx.globalCompositeOperation = 'screen';
++      ctx.globalAlpha = .16 * p.intensity * p.blend;
++      ctx.fillStyle = '#22d3ee';
++      const y = ((p.t * 120) % (h + 80)) - 40;
++      ctx.fillRect(0, y, w, 5 + 8 * p.intensity);
++      ctx.restore();
++    }
++
++    if (p.id === 'night-vision') {
++      ctx.save();
++      ctx.globalAlpha = .22 * p.intensity * p.blend;
++      ctx.strokeStyle = '#86efac';
++      ctx.lineWidth = 1.5;
++      ctx.beginPath(); ctx.arc(w / 2, h / 2, Math.min(w, h) * .22, 0, Math.PI * 2); ctx.stroke();
++      ctx.beginPath(); ctx.moveTo(w / 2 - 18, h / 2); ctx.lineTo(w / 2 + 18, h / 2); ctx.moveTo(w / 2, h / 2 - 18); ctx.lineTo(w / 2, h / 2 + 18); ctx.stroke();
++      ctx.restore();
++    

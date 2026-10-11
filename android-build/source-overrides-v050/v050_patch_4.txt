@@ -1,0 +1,142 @@
+}
++
++    if (p.id === 'comic-burst') {
++      ctx.save();
++      ctx.globalAlpha = .18 * p.intensity * p.blend;
++      ctx.fillStyle = '#fff';
++      for (let y = 0; y < h; y += 8) for (let x = 0; x < w; x += 8) if (((x + y) / 8) % 2 === 0) ctx.fillRect(x, y, 2, 2);
++      ctx.restore();
++    }
++  }
++
+   function drawFrame(renderProjectTime = projectTime) {
+     const baseClip = getActiveClip();
+     if (!baseClip || video.readyState < 2 || !isResolved(baseClip.assetId)) {
+@@ -1123,16 +1785,21 @@
+     const rotatedW = (rot === 90 || rot === 270) ? sourceH : sourceW;
+     const rotatedH = (rot === 90 || rot === 270) ? sourceW : sourceH;
+     const scale = Math.min(w / Math.max(1, rotatedW), h / Math.max(1, rotatedH));
++    const transform = effectTransform(clip, renderProjectTime, w, h);
++    const g = { w, h, sourceW, sourceH, rot, scale };
+     ctx.save();
+     ctx.clearRect(0, 0, w, h);
+     ctx.fillStyle = '#000';
+     ctx.fillRect(0, 0, w, h);
+-    ctx.filter = `brightness(${clip.effects.brightness}%) contrast(${clip.effects.contrast}%) saturate(${clip.effects.saturation}%)`;
+-    ctx.translate(w / 2, h / 2);
+-    ctx.rotate(rot * Math.PI / 180);
+-    ctx.drawImage(video, -(sourceW * scale) / 2, -(sourceH * scale) / 2, sourceW * scale, sourceH * scale);
+     ctx.restore();
+-    ctx.filter = 'none';
++    drawVideoSourceLayer(clip, g, {
++      dx: transform.dx,
++      dy: transform.dy,
++      rotation: transform.rotation,
++      scale: transform.scale,
++      effectId: transform.id
++    });
++    drawVideoEffectOverlay(clip, g, renderProjectTime);
+     const text = String(clip.overlay.text || '').trim();
+     if (text) drawStyledOverlayText(clip, text, w, h, renderProjectTime);
+   }
+@@ -1338,6 +2005,7 @@
+     }
+ 
+     const restoreTime = projectTime;
++    runtimeFxTargets.clear();
+     exportInProgress = true;
+     pausePlayback();
+     renderAll();
+@@ -1587,9 +2255,18 @@
+     if (textAnimationBtn.disabled || !textAnimationLibrary) return;
+     textAnimationLibrary.hidden = !textAnimationLibrary.hidden;
+     if (textStyleLibrary) textStyleLibrary.hidden = true;
++    if (effectLibrary) effectLibrary.hidden = true;
++  });
++
++  effectBtn?.addEventListener('click', () => {
++    if (effectBtn.disabled || !effectLibrary) return;
++    effectLibrary.hidden = !effectLibrary.hidden;
++    if (textStyleLibrary) textStyleLibrary.hidden = true;
++    if (textAnimationLibrary) textAnimationLibrary.hidden = true;
+   });
+ 
+   previewTextAnimationBtn?.addEventListener('click', () => previewSelectedTextAnimation().catch(console.error));
++  previewEffectBtn?.addEventListener('click', () => previewSelectedEffect().catch(console.error));
+ 
+   [trimStart, trimStartRange].forEach((control) => control.addEventListener('input', () => {
+     if (control === trimStartRange) trimStart.value = Number(trimStartRange.value).toFixed(3);
+@@ -1603,9 +2280,10 @@
+   }));
+   [trimStart, trimEnd, trimStartRange, trimEndRange].forEach((control) => control.addEventListener('change', commitInspector));
+ 
+-  [overlayText, textSize, textColor, textX, textY, textZ, textAnimationDuration, textAnimationIntensity, textShadow, brightness, contrast, saturation, rotation, speed, volume].forEach((control) => {
++  [overlayText, textSize, textColor, textX, textY, textZ, textAnimationDuration, textAnimationIntensity, textShadow, brightness, contrast, saturation, rotation, speed, volume, effectIntensity, effectSpeed, effectBlend, effectAutoTrack, effectTargetColor, effectTargetX, effectTargetY, effectTargetSize].filter(Boolean).forEach((control) => {
+     control.addEventListener('input', () => {
+       updateControlOutputs();
++      if ([effectTargetX, effectTargetY, effectTargetSize, effectTargetColor, effectAutoTrack].includes(control) && getSelectedClip()) runtimeFxTargets.delete(getSelectedClip().id);
+       const active = getActiveClip();
+       if (active && active.id === selectedClipId) {
+         const draft = clipDraftFromControls(active);
+@@ -1643,7 +2321,7 @@
+       sourceEnd: asset.duration,
+       speed: 1,
+       volume: 1,
+-      effects: { brightness: 100, contrast: 100, saturation: 100, rotation: 0 },
++      effects: { brightness: 100, contrast: 100, saturation: 100, rotation: 0, preset: 'none', intensity: 100, speed: 100, blend: 100, targetX: 50, targetY: 50, targetSize: 12, targetColor: '#ffffff', targetTrack: false },
+       overlay: { text: '', size: 64, color: '#ffffff', x: 50, y: 88, z: 0, style: 'clean-bold', animation: 'none', animationDuration: 0.9, animationIntensity: 100, shadow: true }
+     });
+     setProject(next, { record: true });
+@@ -1711,6 +2389,44 @@
+     keepPlayheadInView(true);
+   });
+ 
++  pickSphereBtn?.addEventListener('click', () => {
++    const clip = getSelectedClip();
++    if (!clip || !isSphereEffect(effectBtn?.dataset.effect)) return;
++    fxPickMode = true;
++    pickSphereBtn.classList.add('picking');
++    pickSphereBtn.textContent = 'Tap the sphere in the preview…';
++  });
++
++  canvas.addEventListener('pointerdown', (event) => {
++    if (!fxPickMode) return;
++    const clip = getSelectedClip();
++    if (!clip) return;
++    event.preventDefault();
++    const rect = canvas.getBoundingClientRect();
++    const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
++    const shownW = canvas.width * scale;
++    const shownH = canvas.height * scale;
++    const offsetX = (rect.width - shownW) / 2;
++    const offsetY = (rect.height - shownH) / 2;
++    const px = (event.clientX - rect.left - offsetX) / Math.max(.0001, scale);
++    const py = (event.clientY - rect.top - offsetY) / Math.max(.0001, scale);
++    if (px < 0 || py < 0 || px > canvas.width || py > canvas.height) return;
++    effectTargetX.value = String(Core.clamp((px / canvas.width) * 100, 0, 100));
++    effectTargetY.value = String(Core.clamp((py / canvas.height) * 100, 0, 100));
++    try {
++      const pixel = ctx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data;
++      effectTargetColor.value = rgbHex(pixel[0], pixel[1], pixel[2]);
++    } catch (_) {}
++    effectAutoTrack.checked = true;
++    fxPickMode = false;
++    pickSphereBtn.classList.remove('picking');
++    pickSphereBtn.textContent = '◎ Pick sphere in preview';
++    runtimeFxTargets.delete(clip.id);
++    updateControlOutputs();
++    commitInspector();
++    drawFrame();
++  });
++
+   $('fullscreenBtn')?.addEventListener('click', async () => {
+     try {
+       if (!document.fullscreenElement) await dropZone.requestFullscreen?.();
+@@ -1815,6 +2531,7 @@
+ 
+   buildTextStyleLibrary();
+   buildTextAnimationLibrary();
++  buildEffectLibrary();
+   restoreAutosaveIfWanted();
+   renderAll();
+   if (activeTrack().clips.length) {

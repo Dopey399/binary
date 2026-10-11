@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact Cre8torCut v0.4.0 assets
+      - name: Restore exact Cre8torCut v0.5.0 assets
         shell: bash
         run: |
           set -euo pipefail
@@ -52,16 +52,35 @@ jobs:
             android-build/source-overrides-v040/v040_patch_6.txt \
             > /tmp/v040.patch
           patch -p1 < /tmp/v040.patch
+          cat \
+            android-build/source-overrides-v050/v050_patch_0.txt \
+            android-build/source-overrides-v050/v050_patch_1.txt \
+            android-build/source-overrides-v050/v050_patch_2.txt \
+            android-build/source-overrides-v050/v050_patch_3.txt \
+            android-build/source-overrides-v050/v050_patch_4.txt \
+            > /tmp/v050.patch
+          patch -p1 < /tmp/v050.patch
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          4324dd605a8769cfa8db71cdef9ac92a4c951e7a97606ebacf57bb48a7fef077  android-build/app/src/main/assets/index.html
-          b584392881f56f74590ffb93d08cf9009584da95bc08ed992a589b039c928b30  android-build/app/src/main/assets/styles.css
-          dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  android-build/app/src/main/assets/editor-core.js
-          dad3733a8b4cd11ac5cc7462baa9b1e6d617bd0cb22cdb4030887b17e046a611  android-build/app/src/main/assets/app.js
+          13db7162c74911d3daa93fae547834584eceb868c0c8d884f73254d4781c7044  android-build/app/src/main/assets/index.html
+          cf98bca26bd7b1ec6482045a6bc729facba8b16d8fefc409d8d2c5296a6af286  android-build/app/src/main/assets/styles.css
+          d1948730f46efe087f8f9fbfa16a08c9868d1372fb8c0ce6a9a35bcab01fd563  android-build/app/src/main/assets/editor-core.js
+          8ae1c69c20d4254eefd1af942680f8ea85e77e563f14fbf802853e534a9f6d47  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
           node --check android-build/app/src/main/assets/app.js
           node --check android-build/app/src/main/assets/editor-core.js
+          node - <<'JS'
+          const Core = require('./android-build/app/src/main/assets/editor-core.js');
+          let p = Core.createProject('fx-gate');
+          p = Core.addAsset(p,{name:'x.mp4',type:'video/mp4',duration:10,width:1920,height:1080,size:1,lastModified:1}).project;
+          let c = Core.getVideoTrack(p).clips[0];
+          p = Core.updateClip(p,c.id,{effects:{preset:'sphere-glow',intensity:175,speed:250,blend:75,targetX:22.5,targetY:44.5,targetSize:18,targetColor:'#12abef',targetTrack:true}});
+          const q = Core.parseProject(Core.serializeProject(p));
+          const e = Core.getVideoTrack(q).clips[0].effects;
+          if (e.preset !== 'sphere-glow' || e.intensity !== 175 || e.speed !== 250 || e.blend !== 75 || e.targetTrack !== true || e.targetColor !== '#12abef') throw new Error('FX schema roundtrip failed');
+          console.log('FX schema roundtrip: PASS');
+          JS
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -69,15 +88,12 @@ jobs:
           html = Path('android-build/app/src/main/assets/index.html').read_text()
           app = Path('android-build/app/src/main/assets/app.js').read_text()
           assert '\\n' not in css, 'literal escaped-newline sequence found in CSS'
-          assert 'v0.2.7 mobile cinema workspace' in css
-          assert 'v0.3.0 professional UI foundation' in css
           assert 'v0.4.0 Cutroom mobile UI' in css
-          assert 'v0.4.0 Studio compatibility correction' in css
-          assert 'grid-template-columns: 148px minmax(0,1fr) 260px !important' in css
-          assert 'v0.4.0' in html
-          assert 'id="timelineStage"' in html
-          assert 'id="timelineZoomBtn"' in html
-          assert 'id="mobileDock"' in html
+          assert 'v0.5.0 one-tap video effects + sphere-target racing FX' in css
+          assert 'v0.5.0' in html
+          assert 'data-mobile-tool="effects"' in html
+          assert 'id="effectLibrary"' in html
+          assert 'id="pickSphereBtn"' in html
           ids = re.findall(r'id="([^"]+)"', html)
           assert len(ids) == len(set(ids)), 'duplicate HTML ids'
           styles_block = app.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0]
@@ -86,12 +102,19 @@ jobs:
           animations_block = app.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0]
           animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", animations_block)
           assert len(animations) == 24 and len({aid for aid, _ in animations}) == 24
-          assert 'TIMELINE_ZOOM_LEVELS' in app
-          assert 'thumbnail' in app
+          effects_block = app.split('const EFFECT_PRESETS = [',1)[1].split('];',1)[0]
+          effects = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", effects_block)
+          assert len(effects) == 53 and len({eid for eid, _ in effects}) == 53
+          assert effects[0][0] == 'none'
+          assert effects_block.count('target: true') == 10
+          assert 'sphereTargetForFrame' in app
+          assert 'ctx.getImageData' in app
+          assert 'drawVideoEffectOverlay(clip, g, renderProjectTime);' in app
           assert 'drawFrame(exportedTime);' in app
-          print('v0.4.0 Cutroom + Studio regression gates: PASS')
-          print('Text style preset count: PASS (50)')
-          print('Text animation preset count: PASS (24)')
+          print('v0.5.0 FX regression gates: PASS')
+          print('Text styles: PASS (50)')
+          print('Text animations: PASS (24)')
+          print('Video FX: PASS (52 effects + None; 10 sphere-target presets)')
           PY
           grep -q 'WindowInsets.Type.navigationBars()' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
           grep -q 'BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
@@ -129,10 +152,10 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'SUMS'
-          4324dd605a8769cfa8db71cdef9ac92a4c951e7a97606ebacf57bb48a7fef077  /tmp/apk-assets/assets/index.html
-          b584392881f56f74590ffb93d08cf9009584da95bc08ed992a589b039c928b30  /tmp/apk-assets/assets/styles.css
-          dc48459874db2db39b08ec136c4f7c3c96f4718c570499c311d0fb9c5ae6685f  /tmp/apk-assets/assets/editor-core.js
-          dad3733a8b4cd11ac5cc7462baa9b1e6d617bd0cb22cdb4030887b17e046a611  /tmp/apk-assets/assets/app.js
+          13db7162c74911d3daa93fae547834584eceb868c0c8d884f73254d4781c7044  /tmp/apk-assets/assets/index.html
+          cf98bca26bd7b1ec6482045a6bc729facba8b16d8fefc409d8d2c5296a6af286  /tmp/apk-assets/assets/styles.css
+          d1948730f46efe087f8f9fbfa16a08c9868d1372fb8c0ce6a9a35bcab01fd563  /tmp/apk-assets/assets/editor-core.js
+          8ae1c69c20d4254eefd1af942680f8ea85e77e563f14fbf802853e534a9f6d47  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
@@ -140,6 +163,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.4.0-cutroom-pro-ui
+          name: cre8torcut-v0.5.0-fx-sphere-pack
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

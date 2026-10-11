@@ -1,0 +1,168 @@
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -11,7 +11,7 @@
+   <div class="app-shell">
+     <header class="topbar">
+       <div>
+-        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.4.0</span></div>
++        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.5.0</span></div>
+         <div class="subtitle">Local multi-clip browser editor — media stays on your device</div>
+       </div>
+       <div class="top-actions">
+@@ -190,6 +190,30 @@
+           </label>
+         </div>
+ 
++        <div class="control-group" data-tool="effects">
++          <div class="group-title">Video effects</div>
++          <div class="text-picker-block fx-picker-block">
++            <div class="text-picker-head"><strong>FX PRESETS</strong><span>52 effects + None</span></div>
++            <div id="effectFeatured" class="text-featured-strip effect-featured-strip" aria-label="Featured video effects"></div>
++            <button id="effectBtn" type="button" class="button small full picker-button" disabled>Browse effects · None</button>
++            <div id="effectLibrary" class="text-style-library effect-library" hidden aria-label="Video effects library"></div>
++          </div>
++          <div class="range-row"><span>Intensity</span><input id="effectIntensity" type="range" min="0" max="200" step="5" value="100" disabled /><output id="effectIntensityValue">100%</output></div>
++          <div class="range-row"><span>Speed</span><input id="effectSpeed" type="range" min="25" max="300" step="5" value="100" disabled /><output id="effectSpeedValue">100%</output></div>
++          <div class="range-row"><span>Blend</span><input id="effectBlend" type="range" min="0" max="100" step="5" value="100" disabled /><output id="effectBlendValue">100%</output></div>
++          <div id="sphereTargetPanel" class="sphere-target-panel" hidden>
++            <div class="text-picker-head"><strong>SPHERE TARGET</strong><span>tap-to-place + assisted follow</span></div>
++            <button id="pickSphereBtn" type="button" class="button small full" disabled>◎ Pick sphere in preview</button>
++            <label class="check-row"><input id="effectAutoTrack" type="checkbox" disabled /> Assisted follow</label>
++            <label>Target color <input id="effectTargetColor" type="color" value="#ffffff" disabled /></label>
++            <div class="range-row"><span>X</span><input id="effectTargetX" type="range" min="0" max="100" step="0.1" value="50" disabled /><output id="effectTargetXValue">50%</output></div>
++            <div class="range-row"><span>Y</span><input id="effectTargetY" type="range" min="0" max="100" step="0.1" value="50" disabled /><output id="effectTargetYValue">50%</output></div>
++            <div class="range-row"><span>Size</span><input id="effectTargetSize" type="range" min="2" max="40" step="0.5" value="12" disabled /><output id="effectTargetSizeValue">12%</output></div>
++            <p class="fx-help">Tap Pick, then tap the sphere in the preview. Assisted follow searches nearby pixels for the sampled target color while the clip plays or exports.</p>
++          </div>
++          <button id="previewEffectBtn" type="button" class="button small full" disabled>▶ Preview selected effect</button>
++        </div>
++
+         <div class="control-group" data-tool="audio">
+           <div class="group-title">Playback & audio</div>
+           <label>Speed
+@@ -245,6 +269,9 @@
+       <button type="button" data-mobile-tool="trim">
+         <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M4 17h11M8 4v6M12 14v6"/><path d="m16 9 4 3-4 3"/></svg></span><em>Edit</em>
+       </button>
++      <button type="button" data-mobile-tool="effects">
++        <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.5 5.1L19 8.5l-4.5 3.2.8 5.5L12 14.5 8.7 17.2l.8-5.5L5 8.5l5.5-1.4z"/><path d="M4 4l1 2M20 4l-1 2M3 15l2-1M21 15l-2-1"/></svg></span><em>Effects</em>
++      </button>
+       <button type="button" data-mobile-tool="audio">
+         <span class="dock-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></span><em>Audio</em>
+       </button>
+@@ -260,7 +287,7 @@
+     </nav>
+ 
+     <footer class="footer-note">
+-      v0.4.0 introduces the Cutroom mobile workspace: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
++      v0.5.0 adds one-tap video FX and sphere-target racing effects to the Cutroom mobile workspace: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
+     </footer>
+   </div>
+ 
+--- a/android-build/app/src/main/assets/styles.css
++++ b/android-build/app/src/main/assets/styles.css
+@@ -813,3 +813,46 @@
+ @media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+   .workspace { grid-template-columns: 120px minmax(0,1fr) 220px !important; }
+ }
++
++
++/* v0.5.0 one-tap video effects + sphere-target racing FX */
++.effect-library .effect-option { min-height: 48px; gap: 3px; display: grid; place-items: center; }
++.effect-library .effect-option strong { font-size: 9px; line-height: 1.1; }
++.effect-library .effect-option span { font-size: 7px; text-transform: uppercase; letter-spacing: .09em; color: #718096; }
++.effect-library .effect-sphere { border-color: rgba(43,184,255,.38); background: linear-gradient(145deg, rgba(14,165,233,.14), rgba(99,102,241,.1)); }
++.effect-library .effect-energy { border-color: rgba(249,115,22,.25); }
++.effect-library .effect-signal, .effect-library .effect-glitch { border-color: rgba(168,85,247,.28); }
++.effect-library .effect-motion { border-color: rgba(34,211,238,.26); }
++.effect-featured-strip .text-featured-chip { min-width: 82px; }
++.sphere-target-panel { display: grid; gap: 8px; padding: 9px; border: 1px solid rgba(43,184,255,.3); border-radius: 11px; background: linear-gradient(180deg, rgba(6,19,31,.95), rgba(7,13,22,.96)); }
++.sphere-target-panel .text-picker-head strong { color: #7dd3fc; }
++.fx-help { margin: 0; color: #718096; font-size: 8px; line-height: 1.45; }
++#pickSphereBtn.picking { border-color: #38bdf8; background: rgba(14,165,233,.2); color: #e0f2fe; box-shadow: 0 0 0 1px rgba(56,189,248,.18), 0 0 22px rgba(43,184,255,.12); }
++.clip-fx-badge { position: absolute; z-index: 3; top: 4px; right: 4px; display: grid !important; place-items: center; min-width: 18px; height: 14px; padding: 0 3px; border-radius: 4px; background: rgba(168,85,247,.9); color: #fff !important; font-size: 6px !important; font-weight: 950; margin: 0 !important; }
++.timeline-clip.has-text .clip-fx-badge { right: 22px; }
++
++@media (orientation: portrait) and (max-width: 680px) {
++  .mobile-dock { grid-template-columns: repeat(7,minmax(0,1fr)) !important; }
++  .mobile-dock button { padding-inline: 0; }
++  .mobile-dock button em { font-size: 7px; }
++  .dock-icon { width: 23px; height: 23px; }
++  .dock-icon svg { width: 19px; height: 19px; }
++  .inspector[data-active-tool="trim"] .control-group:not([data-tool="trim"]),
++  .inspector[data-active-tool="text"] .control-group:not([data-tool="text"]),
++  .inspector[data-active-tool="adjust"] .control-group:not([data-tool="adjust"]),
++  .inspector[data-active-tool="audio"] .control-group:not([data-tool="audio"]),
++  .inspector[data-active-tool="effects"] .control-group:not([data-tool="effects"]) { display: none !important; }
++  .inspector[data-active-tool="effects"] { max-height: min(68dvh, 560px); }
++  .inspector[data-active-tool="effects"] .effect-library { max-height: 35dvh; grid-template-columns: repeat(2,minmax(0,1fr)); }
++  .inspector[data-active-tool="effects"] .sphere-target-panel { padding: 8px; }
++  .inspector[data-active-tool="effects"] .effect-featured-strip .text-featured-chip { min-width: 72px; padding: 7px 6px; font-size: 8px; }
++  .clip-fx-badge { top: 4px; }
++}
++
++@media (orientation: landscape) and (max-height: 620px) and (min-width: 560px) {
++  .effect-library .effect-option { min-height: 31px; }
++  .effect-library .effect-option strong { font-size: 7px; }
++  .effect-library .effect-option span { font-size: 6px; }
++  .sphere-target-panel { padding: 6px; gap: 5px; }
++  .fx-help { display: none; }
++}
+--- a/android-build/app/src/main/assets/editor-core.js
++++ b/android-build/app/src/main/assets/editor-core.js
+@@ -28,7 +28,7 @@
+   }
+ 
+   function defaultEffects() {
+-    return { brightness: 100, contrast: 100, saturation: 100, rotation: 0 };
++    return { brightness: 100, contrast: 100, saturation: 100, rotation: 0, preset: 'none', intensity: 100, speed: 100, blend: 100, targetX: 50, targetY: 50, targetSize: 12, targetColor: '#ffffff', targetTrack: false };
+   }
+ 
+   function defaultOverlay() {
+@@ -115,7 +115,16 @@
+         brightness: clamp(Number(clip.effects?.brightness) || 100, 0, 200),
+         contrast: clamp(Number(clip.effects?.contrast) || 100, 0, 200),
+         saturation: clamp(Number(clip.effects?.saturation) || 100, 0, 200),
+-        rotation: rotationValues.includes(rotation) ? rotation : 0
++        rotation: rotationValues.includes(rotation) ? rotation : 0,
++        preset: String(clip.effects?.preset || 'none'),
++        intensity: clamp(Number(clip.effects?.intensity) || 100, 0, 200),
++        speed: clamp(Number(clip.effects?.speed) || 100, 25, 300),
++        blend: clamp(Number(clip.effects?.blend) || 100, 0, 100),
++        targetX: clamp(Number(clip.effects?.targetX) || 50, 0, 100),
++        targetY: clamp(Number(clip.effects?.targetY) || 50, 0, 100),
++        targetSize: clamp(Number(clip.effects?.targetSize) || 12, 2, 40),
++        targetColor: /^#[0-9a-fA-F]{6}$/.test(String(clip.effects?.targetColor || '')) ? clip.effects.targetColor : '#ffffff',
++        targetTrack: clip.effects?.targetTrack === true
+       },
+       overlay: {
+         text: String(clip.overlay?.text || ''),
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -66,10 +66,25 @@
+   const rotation = $('rotation');
+   const speed = $('speed');
+   const volume = $('volume');
++  const effectBtn = $('effectBtn');
++  const effectLibrary = $('effectLibrary');
++  const effectFeatured = $('effectFeatured');
++  const effectIntensity = $('effectIntensity');
++  const effectSpeed = $('effectSpeed');
++  const effectBlend = $('effectBlend');
++  const sphereTargetPanel = $('sphereTargetPanel');
++  const pickSphereBtn = $('pickSphereBtn');
++  const effectAutoTrack = $('effectAutoTrack');
++  const effectTargetColor = $('effectTargetColor');
++  const effectTargetX = $('effectTargetX');
++  const effectTargetY = $('effectTargetY');
++  const effectTargetSize = $('effectTargetSize');
++  const previewEffectBtn = $('previewEffectBtn');
+ 
+   const inspectorControls = [
+     trimStart, trimEnd, trimStartRange, trimEndRange, overlayText, textSize, textColor,
+     textX, textY, textZ, textStyleBtn, textAnimationBtn, textAnimationDuration, textAnimationIntensity, previewTextAnimationBtn, textShadow, brightness, contrast, saturation, rotation, speed, volume,
++    effectBtn, effectIntensity, effectSpeed, effectBlend, pickSphereBtn, effectAutoTrack, effectTargetColor, effectTargetX, effectTargetY, effectTargetSize, previewEffectBtn,
+     $('setInBtn'), $('setOutBtn'), $('resetBtn')
+   ];
+ 
+@@ -93,

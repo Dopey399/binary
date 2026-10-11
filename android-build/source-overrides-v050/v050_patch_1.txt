@@ -1,0 +1,205 @@
+6 +108,8 @@
+   const AUTOSAVE_KEY = 'cre8torcut.autosave.v2';
+   const TIMELINE_ZOOM_LEVELS = [32, 48, 72];
+   let timelineZoomIndex = 1;
++  const runtimeFxTargets = new Map();
++  let fxPickMode = false;
+ 
+   function timelinePixelsPerSecond() { return TIMELINE_ZOOM_LEVELS[timelineZoomIndex] || 48; }
+ 
+@@ -190,6 +207,130 @@
+   const FEATURED_STYLE_IDS = ['clean-bold', 'cinema', 'neon-blue', 'chrome', '3d-gold', 'comic-pop', 'glitch', 'fire'];
+   const FEATURED_ANIMATION_IDS = ['none', 'fade-pop', 'typewriter', 'scatter-in-out', 'explode-out', 'ribbon', 'wave', 'slam'];
+ 
++
++  const EFFECT_PRESETS = [
++    { id: 'none', label: 'None', group: 'basic' },
++    { id: 'static-burst', label: 'Static Burst', group: 'signal' },
++    { id: 'tv-snow', label: 'TV Snow', group: 'signal' },
++    { id: 'vhs-dirty', label: 'VHS Dirty', group: 'signal' },
++    { id: 'vhs-tracking', label: 'VHS Tracking', group: 'signal' },
++    { id: 'signal-loss', label: 'Signal Loss', group: 'signal' },
++    { id: 'crt-scanlines', label: 'CRT Scanlines', group: 'signal' },
++    { id: 'old-tv', label: 'Old TV', group: 'signal' },
++    { id: 'rgb-split', label: 'RGB Split', group: 'glitch' },
++    { id: 'digital-glitch', label: 'Digital Glitch', group: 'glitch' },
++    { id: 'data-corruption', label: 'Data Corruption', group: 'glitch' },
++    { id: 'pixel-smash', label: 'Pixel Smash', group: 'glitch' },
++    { id: 'glitch-flash', label: 'Glitch Flash', group: 'glitch' },
++    { id: 'fire-edge', label: 'Fire Edge', group: 'energy' },
++    { id: 'heatwave', label: 'Heatwave', group: 'energy' },
++    { id: 'burning-frame', label: 'Burning Frame', group: 'energy' },
++    { id: 'ember-drift', label: 'Ember Drift', group: 'energy' },
++    { id: 'plasma-glow', label: 'Plasma Glow', group: 'energy' },
++    { id: 'electric-arc', label: 'Electric Arc', group: 'energy' },
++    { id: 'lightning-flicker', label: 'Lightning Flicker', group: 'energy' },
++    { id: 'energy-pulse', label: 'Energy Pulse', group: 'energy' },
++    { id: 'shockwave', label: 'Shockwave', group: 'energy' },
++    { id: 'neon-surge', label: 'Neon Surge', group: 'energy' },
++    { id: 'speed-lines', label: 'Speed Lines', group: 'motion' },
++    { id: 'motion-trails', label: 'Motion Trails', group: 'motion' },
++    { id: 'turbo-boost', label: 'Turbo Boost', group: 'motion' },
++    { id: 'punch-zoom', label: 'Punch Zoom', group: 'motion' },
++    { id: 'camera-shake', label: 'Camera Shake', group: 'motion' },
++    { id: 'velocity-blur', label: 'Velocity Blur', group: 'motion' },
++    { id: 'drift-burst', label: 'Drift Burst', group: 'motion' },
++    { id: 'warp-rush', label: 'Warp Rush', group: 'motion' },
++    { id: 'nitro-flash', label: 'Nitro Flash', group: 'motion' },
++    { id: 'retro-film', label: 'Retro Film', group: 'look' },
++    { id: 'dust-scratches', label: 'Dust + Scratches', group: 'look' },
++    { id: 'noir-film', label: 'Noir', group: 'look' },
++    { id: 'dream-bloom', label: 'Dream Bloom', group: 'look' },
++    { id: 'cyberpunk-glow', label: 'Cyberpunk Glow', group: 'look' },
++    { id: 'hologram', label: 'Hologram', group: 'look' },
++    { id: 'freeze-flash', label: 'Freeze Flash', group: 'look' },
++    { id: 'night-vision', label: 'Night Vision', group: 'look' },
++    { id: 'thermal', label: 'Thermal', group: 'look' },
++    { id: 'comic-burst', label: 'Comic Burst', group: 'look' },
++    { id: 'toxic-glow', label: 'Toxic Glow', group: 'look' },
++    { id: 'sphere-glow', label: 'Sphere Glow', group: 'sphere', target: true },
++    { id: 'sphere-pulse', label: 'Sphere Pulse', group: 'sphere', target: true },
++    { id: 'sphere-halo', label: 'Sphere Halo', group: 'sphere', target: true },
++    { id: 'sphere-trail', label: 'Sphere Trail', group: 'sphere', target: true },
++    { id: 'sphere-energy-ring', label: 'Sphere Energy Ring', group: 'sphere', target: true },
++    { id: 'sphere-shockwave', label: 'Sphere Shockwave', group: 'sphere', target: true },
++    { id: 'sphere-lock-on', label: 'Sphere Lock-On', group: 'sphere', target: true },
++    { id: 'sphere-spark', label: 'Sphere Spark', group: 'sphere', target: true },
++    { id: 'sphere-boost-aura', label: 'Sphere Boost Aura', group: 'sphere', target: true },
++    { id: 'sphere-target', label: 'Sphere Target Highlight', group: 'sphere', target: true }
++  ];
++  const EFFECT_MAP = new Map(EFFECT_PRESETS.map((item) => [item.id, item]));
++  const FEATURED_EFFECT_IDS = ['static-burst', 'fire-edge', 'speed-lines', 'turbo-boost', 'glitch-flash', 'retro-film', 'sphere-glow', 'sphere-lock-on', 'sphere-trail', 'sphere-shockwave'];
++
++  function effectPreset(effectId) {
++    return EFFECT_MAP.get(effectId) || EFFECT_MAP.get('none');
++  }
++
++  function isSphereEffect(effectId) {
++    return Boolean(effectPreset(effectId).target);
++  }
++
++  function setEffectControl(effectId) {
++    const effect = effectPreset(effectId);
++    effectBtn.dataset.effect = effect.id;
++    effectBtn.textContent = `Browse ${EFFECT_PRESETS.length - 1} effects · ${effect.label}`;
++    effectLibrary?.querySelectorAll('.text-style-option').forEach((button) => {
++      button.classList.toggle('active', button.dataset.effect === effect.id);
++    });
++    effectFeatured?.querySelectorAll('.text-featured-chip').forEach((button) => {
++      button.classList.toggle('active', button.dataset.effect === effect.id);
++    });
++    if (sphereTargetPanel) sphereTargetPanel.hidden = !isSphereEffect(effect.id);
++  }
++
++  function buildEffectLibrary() {
++    if (!effectLibrary) return;
++    effectLibrary.innerHTML = '';
++    if (effectFeatured) effectFeatured.innerHTML = '';
++    EFFECT_PRESETS.forEach((effect) => {
++      const button = document.createElement('button');
++      button.type = 'button';
++      button.className = `text-style-option effect-option effect-${effect.group}`;
++      button.dataset.effect = effect.id;
++      button.innerHTML = `<strong>${effect.label}</strong><span>${effect.group}</span>`;
++      button.addEventListener('click', () => {
++        if (exportInProgress || !getSelectedClip()) return;
++        setEffectControl(effect.id);
++        effectLibrary.hidden = true;
++        runtimeFxTargets.delete(getSelectedClip().id);
++        commitInspector();
++        drawFrame();
++      });
++      effectLibrary.appendChild(button);
++    });
++    FEATURED_EFFECT_IDS.forEach((effectId) => {
++      const effect = effectPreset(effectId);
++      effectFeatured?.appendChild(featuredChip(effect.label, () => {
++        if (exportInProgress || !getSelectedClip()) return;
++        setEffectControl(effect.id);
++        runtimeFxTargets.delete(getSelectedClip().id);
++        commitInspector();
++        drawFrame();
++      }, 'effect', effect.id));
++    });
++    setEffectControl('none');
++  }
++
++  async function previewSelectedEffect() {
++    const clip = getSelectedClip();
++    if (!clip || exportInProgress) return;
++    const placement = Core.clipPlacements(project).find((item) => item.clip.id === clip.id);
++    if (!placement) return;
++    runtimeFxTargets.delete(clip.id);
++    pausePlayback();
++    await seekProject(placement.start);
++    await startPlayback();
++  }
++
+   function textAnimation(animationId) {
+     return TEXT_ANIMATION_MAP.get(animationId) || TEXT_ANIMATION_MAP.get('none');
+   }
+@@ -346,8 +487,11 @@
+     textStyleFeatured?.querySelectorAll('button').forEach((button) => { button.disabled = !enabled; });
+     textAnimationLibrary?.querySelectorAll('button').forEach((button) => { button.disabled = !enabled; });
+     textAnimationFeatured?.querySelectorAll('button').forEach((button) => { button.disabled = !enabled; });
++    effectLibrary?.querySelectorAll('button').forEach((button) => { button.disabled = !enabled; });
++    effectFeatured?.querySelectorAll('button').forEach((button) => { button.disabled = !enabled; });
+     if (!enabled && textStyleLibrary) textStyleLibrary.hidden = true;
+     if (!enabled && textAnimationLibrary) textAnimationLibrary.hidden = true;
++    if (!enabled && effectLibrary) effectLibrary.hidden = true;
+   }
+ 
+   function setEditButtons() {
+@@ -555,12 +699,12 @@
+       const runtime = runtimeForAsset(placement.clip.assetId);
+       const block = document.createElement('button');
+       block.type = 'button';
+-      block.className = `timeline-clip${placement.clip.id === selectedClipId ? ' selected' : ''}${isResolved(placement.clip.assetId) ? '' : ' missing'}${placement.clip.overlay?.text ? ' has-text' : ''}`;
++      block.className = `timeline-clip${placement.clip.id === selectedClipId ? ' selected' : ''}${isResolved(placement.clip.assetId) ? '' : ' missing'}${placement.clip.overlay?.text ? ' has-text' : ''}${placement.clip.effects?.preset && placement.clip.effects.preset !== 'none' ? ' has-fx' : ''}`;
+       block.style.left = `${placement.start * pixelsPerSecond}px`;
+       block.style.width = `${Math.max(28, placement.duration * pixelsPerSecond)}px`;
+       if (runtime?.thumbnail) block.style.backgroundImage = `linear-gradient(90deg, rgba(2,8,16,.22), rgba(2,8,16,.44)), url("${safeCssUrl(runtime.thumbnail)}")`;
+       block.dataset.clipId = placement.clip.id;
+-      block.innerHTML = `<span class="clip-type-badge">V</span>${placement.clip.overlay?.text ? '<span class="clip-overlay-badge">T</span>' : ''}<strong></strong><span class="clip-duration">${fmt(placement.duration)}</span>`;
++      block.innerHTML = `<span class="clip-type-badge">V</span>${placement.clip.overlay?.text ? '<span class="clip-overlay-badge">T</span>' : ''}${placement.clip.effects?.preset && placement.clip.effects.preset !== 'none' ? '<span class="clip-fx-badge">FX</span>' : ''}<strong></strong><span class="clip-duration">${fmt(placement.duration)}</span>`;
+       block.querySelector('strong').textContent = placement.clip.name;
+       block.addEventListener('click', (event) => {
+         event.stopPropagation();
+@@ -602,7 +746,16 @@
+         brightness: Number(brightness.value),
+         contrast: Number(contrast.value),
+         saturation: Number(saturation.value),
+-        rotation: Number(rotation.value)
++        rotation: Number(rotation.value),
++        preset: effectBtn?.dataset.effect || baseClip.effects?.preset || 'none',
++        intensity: Number(effectIntensity?.value ?? baseClip.effects?.intensity ?? 100),
++        speed: Number(effectSpeed?.value ?? baseClip.effects?.speed ?? 100),
++        blend: Number(effectBlend?.value ?? baseClip.effects?.blend ?? 100),
++        targetX: Number(effectTargetX?.value ?? baseClip.effects?.targetX ?? 50),
++        targetY: Number(effectTargetY?.value ?? baseClip.effects?.targetY ?? 50),
++        targetSize: Number(effectTargetSize?.value ?? baseClip.effects?.targetSize ?? 12),
++        targetColor: effectTargetColor?.value || baseClip.effects?.targetColor || '#ffffff',
++        targetTrack: Boolean(effectAutoTrack?.checked)
+       },
+       overlay: {
+         text: overlayText.value,
+@@ -652,6 +805,15 @@
+     contrast.value = String(clip.effects.contrast);
+     saturation.value = String(clip.effects.saturation);
+     rotation.value = String(clip.effects.rotation);
++    setEffectControl(clip.effects.preset || 'none');
++    effectIntensity.value = String(clip.effects.intensity ?? 100);
++    effectSpeed.value = String(clip.effects.speed ?? 100);
++    effectBlend.value = String(clip.effects.blend ?? 100);
++    effectTargetX.value = String(clip.effects.targetX ?? 50);
++    effectTargetY.value = String(clip.effects.targetY ?? 50);
++    effectTargetSize.value = String(clip.effects.targetSize ?? 12);
++    effectTargetColor.value = clip.effects.targetColor || '#ffffff';
++    effectAutoTrack.checked = clip.effects.targetTrack === true;
+     speed.value = String(clip.speed);
+     volume.value = String(Math.round(clip.volume * 100));
+     updateControlOutputs();
+@@ -666,6 +828,12 @@
+     $('textZValue').value = textZ.value;
+     $('textAnimationDurationValue').value = `${Number(textAnimationDuration.value).toFixed(1)}s`;
+     $('textAnimationIntensityValue').value = `${Math.round

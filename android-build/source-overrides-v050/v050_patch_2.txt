@@ -1,0 +1,255 @@
+(Number(textAnimationIntensity.value))}%`;
++    if ($('effectIntensityValue')) $('effectIntensityValue').value = `${Math.round(Number(effectIntensity.value))}%`;
++    if ($('effectSpeedValue')) $('effectSpeedValue').value = `${Math.round(Number(effectSpeed.value))}%`;
++    if ($('effectBlendValue')) $('effectBlendValue').value = `${Math.round(Number(effectBlend.value))}%`;
++    if ($('effectTargetXValue')) $('effectTargetXValue').value = `${Number(effectTargetX.value).toFixed(0)}%`;
++    if ($('effectTargetYValue')) $('effectTargetYValue').value = `${Number(effectTargetY.value).toFixed(0)}%`;
++    if ($('effectTargetSizeValue')) $('effectTargetSizeValue').value = `${Number(effectTargetSize.value).toFixed(0)}%`;
+   }
+ 
+   function normalizeTrimInputs(source) {
+@@ -1107,6 +1275,500 @@
+     drawStyledTextUnit(style, overlay, text, x + dx, y + dy, size, maxWidth, z, { rotation, scaleX: scaleX * scale, scaleY: scale, alpha });
+   }
+ 
++
++  function fxRand(index, frame, salt = 0) {
++    const n = Math.sin((index + 1) * 12.9898 + (frame + 1) * 78.233 + salt * 37.719) * 43758.5453;
++    return n - Math.floor(n);
++  }
++
++  function fxLocalTime(clip, renderProjectTime) {
++    const placement = Core.clipPlacements(project).find((item) => item.clip.id === clip.id);
++    return placement ? Core.clamp(renderProjectTime - placement.start, 0, placement.duration) : 0;
++  }
++
++  function fxParams(clip, renderProjectTime) {
++    const effects = clip.effects || {};
++    const local = fxLocalTime(clip, renderProjectTime);
++    const speed = Core.clamp(Number(effects.speed) || 100, 25, 300) / 100;
++    return {
++      id: effectPreset(effects.preset).id,
++      local,
++      t: local * speed,
++      intensity: Core.clamp(Number(effects.intensity) || 100, 0, 200) / 100,
++      blend: Core.clamp(Number(effects.blend) || 100, 0, 100) / 100,
++      speed
++    };
++  }
++
++  function presetFilter(effectId) {
++    if (effectId === 'old-tv') return 'grayscale(.82) sepia(.48) contrast(1.12)';
++    if (effectId === 'retro-film' || effectId === 'dust-scratches') return 'sepia(.34) saturate(.78) contrast(1.08)';
++    if (effectId === 'noir-film') return 'grayscale(1) contrast(1.28) brightness(.94)';
++    if (effectId === 'dream-bloom') return 'brightness(1.1) saturate(1.24) contrast(.94)';
++    if (effectId === 'cyberpunk-glow') return 'saturate(1.75) contrast(1.18) hue-rotate(318deg)';
++    if (effectId === 'hologram') return 'saturate(.78) brightness(1.08) hue-rotate(148deg)';
++    if (effectId === 'night-vision') return 'grayscale(.72) sepia(.82) hue-rotate(64deg) saturate(3.1) contrast(1.2)';
++    if (effectId === 'thermal') return 'saturate(3.6) contrast(1.32) hue-rotate(156deg)';
++    if (effectId === 'comic-burst') return 'contrast(1.48) saturate(1.72) brightness(1.03)';
++    if (effectId === 'toxic-glow') return 'saturate(2.55) contrast(1.18) hue-rotate(58deg)';
++    return '';
++  }
++
++  function effectTransform(clip, renderProjectTime, w, h) {
++    const p = fxParams(clip, renderProjectTime);
++    let dx = 0, dy = 0, scale = 1, rotation = 0;
++    if (p.id === 'camera-shake' || p.id === 'glitch-flash') {
++      dx = Math.sin(p.t * 43) * w * .009 * p.intensity;
++      dy = Math.cos(p.t * 57) * h * .009 * p.intensity;
++      rotation = Math.sin(p.t * 31) * .012 * p.intensity;
++    } else if (p.id === 'punch-zoom') {
++      const pulse = Math.pow(Math.max(0, Math.sin(p.t * Math.PI * 2)), 8);
++      scale = 1 + pulse * .2 * p.intensity;
++    } else if (p.id === 'turbo-boost' || p.id === 'warp-rush') {
++      scale = 1.025 + Math.max(0, Math.sin(p.t * 5)) * .035 * p.intensity;
++    } else if (p.id === 'drift-burst') {
++      dx = Math.sin(p.t * 4.5) * w * .018 * p.intensity;
++      rotation = Math.sin(p.t * 3.8) * .018 * p.intensity;
++    } else if (p.id === 'signal-loss') {
++      const burst = fxRand(1, Math.floor(p.t * 9), 20) > .75 ? 1 : 0;
++      dx = burst * (fxRand(2, Math.floor(p.t * 9), 21) - .5) * w * .06 * p.intensity;
++    }
++    return { ...p, dx, dy, scale, rotation };
++  }
++
++  function baseVideoFilter(clip, effectId) {
++    const base = `brightness(${clip.effects.brightness}%) contrast(${clip.effects.contrast}%) saturate(${clip.effects.saturation}%)`;
++    const extra = presetFilter(effectId);
++    return extra ? `${base} ${extra}` : base;
++  }
++
++  function drawVideoSourceLayer(clip, g, options = {}) {
++    ctx.save();
++    ctx.globalAlpha = options.alpha ?? 1;
++    ctx.globalCompositeOperation = options.composite || 'source-over';
++    ctx.filter = options.filter || baseVideoFilter(clip, options.effectId || 'none');
++    ctx.translate(g.w / 2 + (options.dx || 0), g.h / 2 + (options.dy || 0));
++    ctx.rotate((g.rot * Math.PI / 180) + (options.rotation || 0));
++    const scaleMul = options.scale ?? 1;
++    ctx.scale(scaleMul, scaleMul);
++    ctx.drawImage(video, -(g.sourceW * g.scale) / 2, -(g.sourceH * g.scale) / 2, g.sourceW * g.scale, g.sourceH * g.scale);
++    ctx.restore();
++    ctx.filter = 'none';
++    ctx.globalCompositeOperation = 'source-over';
++  }
++
++  function drawBandLayer(clip, g, y, height, dx, options = {}) {
++    ctx.save();
++    ctx.beginPath();
++    ctx.rect(0, y, g.w, height);
++    ctx.clip();
++    drawVideoSourceLayer(clip, g, { ...options, dx: (options.dx || 0) + dx });
++    ctx.restore();
++  }
++
++  function drawScanlines(w, h, alpha = .18, spacing = 4) {
++    ctx.save();
++    ctx.globalAlpha = alpha;
++    ctx.fillStyle = '#000';
++    for (let y = 0; y < h; y += spacing) ctx.fillRect(0, y, w, 1);
++    ctx.restore();
++  }
++
++  function drawVignette(w, h, alpha = .45) {
++    const gradient = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .18, w / 2, h / 2, Math.max(w, h) * .68);
++    gradient.addColorStop(0, 'rgba(0,0,0,0)');
++    gradient.addColorStop(1, `rgba(0,0,0,${Core.clamp(alpha, 0, .85)})`);
++    ctx.save();
++    ctx.fillStyle = gradient;
++    ctx.fillRect(0, 0, w, h);
++    ctx.restore();
++  }
++
++  function drawNoise(w, h, p, monochrome = false, density = 170) {
++    const frame = Math.floor(p.t * 30);
++    ctx.save();
++    ctx.globalAlpha = .08 + .22 * p.intensity * p.blend;
++    for (let i = 0; i < density; i += 1) {
++      const x = fxRand(i, frame, 2) * w;
++      const y = fxRand(i, frame, 3) * h;
++      const size = 1 + fxRand(i, frame, 4) * Math.max(2, Math.min(w, h) * .012);
++      const v = Math.floor(fxRand(i, frame, 5) * 255);
++      ctx.fillStyle = monochrome ? `rgb(${v},${v},${v})` : `hsl(${Math.floor(fxRand(i, frame, 6) * 360)} 90% 60%)`;
++      ctx.fillRect(x, y, size, Math.max(1, size * .35));
++    }
++    ctx.restore();
++  }
++
++  function drawLightning(w, h, p, color = '#7dd3fc', count = 2) {
++    const frame = Math.floor(p.t * 12);
++    ctx.save();
++    ctx.lineCap = 'round';
++    ctx.shadowColor = color;
++    ctx.shadowBlur = 12 + 18 * p.intensity;
++    ctx.strokeStyle = color;
++    ctx.lineWidth = Math.max(1.5, Math.min(w, h) * .004 * p.intensity);
++    ctx.globalAlpha = (.45 + .45 * fxRand(0, frame, 90)) * p.blend;
++    for (let arc = 0; arc < count; arc += 1) {
++      let x = fxRand(arc, frame, 91) * w;
++      let y = 0;
++      ctx.beginPath();
++      ctx.moveTo(x, y);
++      const segments = 10;
++      for (let i = 1; i <= segments; i += 1) {
++        y = (i / segments) * h;
++        x += (fxRand(i + arc * 20, frame, 92) - .5) * w * .12 * p.intensity;
++        ctx.lineTo(x, y);
++      }
++      ctx.stroke();
++    }
++    ctx.restore();
++  }
++
++  function drawSpeedLines(w, h, p, color = '#dbeafe') {
++    const frame = Math.floor(p.t * 24);
++    const cx = w / 2, cy = h / 2;
++    ctx.save();
++    ctx.globalAlpha = .14 + .36 * p.intensity * p.blend;
++    ctx.strokeStyle = color;
++    ctx.lineWidth = Math.max(1, Math.min(w, h) * .0025);
++    for (let i = 0; i < 48; i += 1) {
++      const a = fxRand(i, frame, 40) * Math.PI * 2;
++      const inner = Math.min(w, h) * (.14 + fxRand(i, frame, 41) * .22);
++      const outer = inner + Math.max(w, h) * (.12 + fxRand(i, frame, 42) * .35 * p.intensity);
++      ctx.beginPath();
++      ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
++      ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
++      ctx.stroke();
++    }
++    ctx.restore();
++  }
++
++  function drawFire(w, h, p, edgeOnly = false) {
++    const frame = Math.floor(p.t * 18);
++    const count = edgeOnly ? 28 : 48;
++    ctx.save();
++    ctx.globalCompositeOperation = 'screen';
++    for (let i = 0; i < count; i += 1) {
++      const side = edgeOnly ? (i % 2) : 2;
++      const x = side === 0 ? fxRand(i, frame, 50) * w * .12 : side === 1 ? w - fxRand(i, frame, 50) * w * .12 : fxRand(i, frame, 50) * w;
++      const baseY = h - fxRand(i, frame, 51) * h * (edgeOnly ? .95 : .45);
++      const r = Math.max(6, Math.min(w, h) * (.018 + fxRand(i, frame, 52) * .05) * p.intensity);
++      const rise = ((p.t * 80 + fxRand(i, 0, 53) * h) % (h * .6));
++      const y = edgeOnly ? baseY : h - rise;
++      const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
++      grad.addColorStop(0, `rgba(255,245,150,${.45 * p.blend})`);
++      grad.addColorStop(.35, `rgba(255,126,35,${.34 * p.blend})`);
++      grad.addColorStop(1, 'rgba(220,20,20,0)');
++      ctx.fillStyle = grad;
++      ctx.beginPath();
++      ctx.ellipse(x, y, r, r * 2.4, 0, 0, Math.PI * 2);
++      ctx.fill();
++    }
++    ctx.restore();
++  }
++
++  function parseHexColor(hex) {
++    const value = String(hex || '#ffffff').replace('#', '');
++    return value.length === 6 ? [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)] : [255, 255, 255];
++  }
++
++  function rgbHex(r, g, b) {
++    return `#${[r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
++  }
++
++  function sphereTargetForFrame(clip, g, renderProjectTime, p) {
++    const effects = clip.effects || {};
++    const baseX = Core.clamp(Number(effects.targetX) || 50, 0, 100) / 100 * g.w;
++    const baseY = Core.clamp(Number(effects.targetY) || 50, 0, 100) / 100 * g.h;
++    let state = runtimeFxTargets.get(clip.id);
++    if (!state || renderProjectTime < (state.lastTime ?? renderProjectTime) - .08) {
++      state = { x: baseX, y: baseY, history: [], frameKey: -1, lastTime: renderProjectTime };
++      runtimeFxTargets.set(clip.id, state);
++    }
++    if (effects.targetTrack === true) {
++      const frameKey = Math.floor(renderProjectTime * 12);
++      if (state.frameKey !== frameKey) {
++        state.frameKey = frameKey;
++        const [tr, tg, tb] = parseHexColor(effects.targetColor);
++        const targetRadius = Math.max(10, Math.min(g.w, g.h) * (Core.clamp(Number(effects.targetSize) || 12, 2, 40) / 100));
++        const search = Math.max(targetRadius * 2.5, Math.min(g.w, g.h) * .055);
++        const sx = Math.max(0, Math.floor(state.x - search));
++        const sy = Math.max(0, Math.floor(state.y - search));
++        const ex = Math.min(g.w, Math.ceil(state.x + search));
++        const ey = Math.min(g.h, Math.ceil(state.y + search));
++        const sw = Math.max(1, ex - sx), sh = Math.max(1, ey - sy);
++        try {
++          const data = ctx.getImageData(sx, sy, sw, sh).data;
++          const step = Math.max(3, Math.round(Math.min(g.w, g.h) / 180));
++          let best = null;
++          for (let y = 0; y < sh; y += step) {
++            for (let x = 0; x < sw; x += step) {
++              const offset = (y * sw + x) * 4;
++              const dr = data[offset] - tr, dg = data[offset + 1] - tg, db = data[offset + 2] - tb;
++              const colorScore = dr * dr + dg * dg + db * db;
++              const gx = sx + x, gy = sy + y;
++              const dx = gx - state.x, dy = gy - state.y;
++              const spatial = (dx * dx + dy * dy) * .18;
++              const score = colorScore + spatial;
++              if (!best || score < best.score) best = { x: gx, y: gy, score };
++            }
++          }
++          if (best && best.score < 85000) {
++            const follow = .34 + .22 * Math.min(1, p.intensity);
++        
