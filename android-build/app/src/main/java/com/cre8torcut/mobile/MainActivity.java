@@ -5,8 +5,12 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -32,6 +36,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         try {
             buildWebView();
+            hideNavigationBar();
         } catch (Throwable t) {
             showFatal("Cre8torCut could not start", t);
         }
@@ -39,7 +44,7 @@ public class MainActivity extends Activity {
 
     private void buildWebView() {
         webView = new WebView(this);
-        webView.setBackgroundColor(Color.rgb(7, 11, 20));
+        webView.setBackgroundColor(Color.rgb(3, 5, 10));
         setContentView(webView, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
@@ -98,6 +103,22 @@ public class MainActivity extends Activity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    private void hideNavigationBar() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        }
+    }
+
     private Intent createOpenDocumentIntent(WebChromeClient.FileChooserParams params) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -133,6 +154,7 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_REQUEST || pendingFiles == null) {
+            hideNavigationBar();
             return;
         }
 
@@ -163,6 +185,19 @@ public class MainActivity extends Activity {
 
         pendingFiles.onReceiveValue(result);
         pendingFiles = null;
+        hideNavigationBar();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        hideNavigationBar();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideNavigationBar();
     }
 
     @Override
@@ -200,7 +235,7 @@ public class MainActivity extends Activity {
         TextView text = new TextView(this);
         text.setText(message);
         text.setTextColor(Color.WHITE);
-        text.setBackgroundColor(Color.rgb(7, 11, 20));
+        text.setBackgroundColor(Color.rgb(3, 5, 10));
         text.setTextSize(16f);
         int pad = (int) (24 * getResources().getDisplayMetrics().density);
         text.setPadding(pad, pad, pad, pad);
