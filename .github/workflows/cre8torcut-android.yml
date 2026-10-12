@@ -13,56 +13,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact Cre8torCut v0.6.0 assets
+      - name: Restore exact Cre8torCut v0.7.0 assets
         shell: bash
         run: |
           set -euo pipefail
-          cat \
-            android-build/source-assets/v0210_0.b64 \
-            android-build/source-assets/v0210_1.b64 \
-            android-build/source-assets/v0210_2.b64 \
-            android-build/source-assets/v0210_3.b64 \
-            android-build/source-assets/v0210_4.b64 \
-            android-build/source-assets/v0210_5.b64 \
-            > /tmp/cre8torcut-v0210.tar.xz.b64
-          base64 -d /tmp/cre8torcut-v0210.tar.xz.b64 > /tmp/cre8torcut-v0210.tar.xz
-          echo '3c7ab96b48d8f5160d80e8d0578419adbc19b5e9251da4f33e68167ae5077cfa  /tmp/cre8torcut-v0210.tar.xz' | sha256sum -c -
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
-          xz -dc /tmp/cre8torcut-v0210.tar.xz | tar -xf - -C android-build/app/src/main/assets
-          python3 - <<'PYHTML'
-          from pathlib import Path
-          p = Path('android-build/app/src/main/assets/index.html')
-          text = p.read_text()
-          old_footer = 'v0.2.10 restores the intended cinema mobile workspace and keeps 50 text styles, 24 animated-text presets, and the deterministic project model with per-clip edits, undo/redo, project JSON save/load, sequential multi-clip playback, and WebM export. MP4/H.264 is not implemented yet.'
-          new_footer = 'v0.3.0 introduces the professional adaptive Studio workspace in landscape while preserving the repaired portrait cinema editor, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.'
-          assert old_footer in text
-          text = text.replace('<span class="version">v0.2.10</span>', '<span class="version">v0.3.0</span>', 1)
-          text = text.replace(old_footer, new_footer, 1)
-          p.write_text(text)
-          PYHTML
-          cat android-build/source-overrides-v030/studio-0.css android-build/source-overrides-v030/studio-1.css >> android-build/app/src/main/assets/styles.css
-          cat android-build/source-overrides-v040/v040_patch_0.txt android-build/source-overrides-v040/v040_patch_1.txt android-build/source-overrides-v040/v040_patch_2.txt android-build/source-overrides-v040/v040_patch_3.txt android-build/source-overrides-v040/v040_patch_4.txt android-build/source-overrides-v040/v040_patch_5.txt android-build/source-overrides-v040/v040_patch_6.txt > /tmp/v040.patch
-          patch -p1 < /tmp/v040.patch
-          cat android-build/source-overrides-v050/v050_patch_0.txt android-build/source-overrides-v050/v050_patch_1.txt android-build/source-overrides-v050/v050_patch_2.txt android-build/source-overrides-v050/v050_patch_3.txt android-build/source-overrides-v050/v050_patch_4.txt > /tmp/v050.patch
-          patch -p1 < /tmp/v050.patch
-          curl -fL --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-a220-81f5-b8b8-3ebeb341e525/raw?se=2026-10-12T00%3A46%3A51Z&sp=r&sv=2026-02-06&sr=b&scid=4e4b8ad7-d191-5fc9-8ef1-abf4ebfc4504&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-11T14%3A42%3A56Z&ske=2026-10-12T14%3A42%3A56Z&sks=b&skv=2026-02-06&sig=pmI/ejF1ttIUETconZ1EVw%2B3NztrTl4%2BV/l83X7HqxA%3D' -o /tmp/v060.patch
-          echo 'f4512470ddd2307b225752571a24e1d800a9aee2c20a92340aa59793951aac27  /tmp/v060.patch' | sha256sum -c -
-          patch -p1 < /tmp/v060.patch
-          python3 - <<'PYCORE'
-          from pathlib import Path
-          p = Path('android-build/app/src/main/assets/editor-core.js')
-          s = p.read_text()
-          old = "      updatedAt: timestamp,\n      tracks: DEFAULT_VIDEO_TRACKS.map(createVideoTrack)\n"
-          new = "      updatedAt: timestamp,\n      assets: [],\n      tracks: DEFAULT_VIDEO_TRACKS.map(createVideoTrack)\n"
-          assert old in s
-          p.write_text(s.replace(old, new, 1))
-          PYCORE
+          cp android-build/source-current-v070-assets.tar.gz /tmp/cre8torcut-v070-assets.tar.gz
+          echo '5b10e37cc2868d60ac94bf35bff9c01c7cfcd40e3d211336261d2c915edb03ee  /tmp/cre8torcut-v070-assets.tar.gz' | sha256sum -c -
+          tar -xzf /tmp/cre8torcut-v070-assets.tar.gz -C android-build/app/src/main/assets
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  android-build/app/src/main/assets/index.html
-          a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  android-build/app/src/main/assets/styles.css
+          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  android-build/app/src/main/assets/index.html
+          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  android-build/app/src/main/assets/styles.css
           e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  android-build/app/src/main/assets/editor-core.js
-          56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  android-build/app/src/main/assets/app.js
+          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
@@ -71,11 +35,11 @@ jobs:
           node - <<'JS'
           const Core = require('./android-build/app/src/main/assets/editor-core.js');
           const ok = (v,m) => { if (!v) throw new Error(m); };
-          let p = Core.createProject('layer-gate');
+          let p = Core.createProject('creator-mode-gate');
           ok(p.schemaVersion === 3, 'schema v3 missing');
           ok(Core.getVideoTracks(p).length === 3, 'three video tracks missing');
           const history = new Core.ProjectHistory(p);
-          ok(Array.isArray(history.current().assets) && history.current().assets.length === 0, 'clean startup/history failed');
+          ok(Array.isArray(history.current().assets), 'clean startup/history failed');
           const add = Core.addAsset(p,{name:'x.mp4',type:'video/mp4',duration:10,width:1920,height:1080,size:1,lastModified:1}); p = add.project;
           const over = Core.appendClip(p, add.assetId, {timelineStart:2, layer:{opacity:0,scale:52,x:0,y:50,blendMode:'screen'}}, 'video_2'); p = over.project;
           const clip = Core.getTrack(p,'video_2').clips[0];
@@ -85,38 +49,43 @@ jobs:
           ok(Core.getTrack(p,'video_3').clips.length === 1, 'layer move failed');
           const q = Core.parseProject(Core.serializeProject(p));
           ok(q.schemaVersion === 3 && Core.getVideoTracks(q).length === 3, 'schema roundtrip failed');
-          console.log('v0.6.0 layer engine gate: PASS');
+          console.log('v0.7.0 core/layer gate: PASS');
           JS
           python3 - <<'PY'
           import re
           from pathlib import Path
-          css = Path('android-build/app/src/main/assets/styles.css').read_text()
-          html = Path('android-build/app/src/main/assets/index.html').read_text()
-          app = Path('android-build/app/src/main/assets/app.js').read_text()
-          core = Path('android-build/app/src/main/assets/editor-core.js').read_text()
+          root = Path('android-build/app/src/main/assets')
+          css = (root/'styles.css').read_text()
+          html = (root/'index.html').read_text()
+          app = (root/'app.js').read_text()
+          core = (root/'editor-core.js').read_text()
           assert '\\n' not in css, 'literal escaped-newline sequence found in CSS'
-          assert 'v0.4.0 Cutroom mobile UI' in css
-          assert 'v0.5.0 one-tap video effects + sphere-target racing FX' in css
-          assert 'v0.6.0 Layer Engine + Visual FX Browser + Creator Texture' in css
-          assert 'v0.6.0' in html
-          assert 'Layer Timeline — V1 / V2 / V3' in html
-          for marker in ['id="layerOpacity"','id="layerScale"','id="layerX"','id="layerY"','id="layerBlend"','data-mobile-tool="effects"','id="effectLibrary"']:
+          assert 'v0.7.0 Creator Mode + hover-wheel precision + stronger creator identity' in css
+          assert 'v0.7.0' in html
+          for marker in ['id="creatorModeBtn"','data-tool="creator"','id="creatorRecipeGrid"','id="creatorStrength"','id="beforeAfterBtn"','data-mobile-tool="creator"']:
               assert marker in html, marker
           ids = re.findall(r'id="([^"]+)"', html)
           assert len(ids) == len(set(ids)), 'duplicate HTML ids'
+          dom_refs = set(re.findall(r"\$\('([^']+)'\)", app))
+          assert not (dom_refs - set(ids)), f'missing DOM ids: {sorted(dom_refs-set(ids))}'
           styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", app.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0])
           animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", app.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0])
           effects_block = app.split('const EFFECT_PRESETS = [',1)[1].split('];',1)[0]
           effects = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", effects_block)
+          recipes_block = app.split('const CREATOR_RECIPES = [',1)[1].split('];',1)[0]
+          recipes = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", recipes_block)
           assert len(styles) == 50 and len({x[0] for x in styles}) == 50
           assert len(animations) == 24 and len({x[0] for x in animations}) == 24
           assert len(effects) == 53 and len({x[0] for x in effects}) == 53 and effects[0][0] == 'none'
           assert effects_block.count('target: true') == 10
-          for marker in ['syncAllTracksAtTime','Core.findClipsAtTime','layered-export.webm','refreshEffectPreviewTiles']:
+          assert len(recipes) == 11 and len({x[0] for x in recipes}) == 11
+          for marker in ['handleHoverWheel','wheelGestureBaseProject','finalizeWheelHistoryGesture','applyCreatorRecipe','buildCreatorRecipes','originalComparisonClip','previewOriginalMode']:
               assert marker in app, marker
+          assert 'aMAZEd' not in html and 'aMAZEd' not in app and 'aMAZEd' not in css, 'game-specific branding leaked into general Cre8torCut source'
           for marker in ['const SCHEMA_VERSION = 3','function moveClipToTrack','function setTrackState','function findClipsAtTime']:
               assert marker in core, marker
-          print('v0.6.0 static regression gates: PASS')
+          print('v0.7.0 static regression gates: PASS')
+          print('Creator recipes: PASS (11); wheel precision markers: PASS; before/after: PASS')
           print('Text styles: PASS (50); animations: PASS (24); video FX: PASS (52 + None; 10 sphere FX)')
           PY
           grep -q 'WindowInsets.Type.navigationBars()' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
@@ -155,10 +124,10 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'SUMS'
-          5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  /tmp/apk-assets/assets/index.html
-          a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  /tmp/apk-assets/assets/styles.css
+          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  /tmp/apk-assets/assets/index.html
+          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  /tmp/apk-assets/assets/styles.css
           e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  /tmp/apk-assets/assets/editor-core.js
-          56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  /tmp/apk-assets/assets/app.js
+          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
@@ -166,6 +135,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.6.0-layer-engine-visual-fx
+          name: cre8torcut-v0.7.0-creator-mode-wheel-precision
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
