@@ -19,9 +19,10 @@ jobs:
           set -euo pipefail
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
-          cp android-build/source-current-v070-assets.tar.gz /tmp/cre8torcut-v070-assets.tar.gz
-          echo '5b10e37cc2868d60ac94bf35bff9c01c7cfcd40e3d211336261d2c915edb03ee  /tmp/cre8torcut-v070-assets.tar.gz' | sha256sum -c -
-          tar -xzf /tmp/cre8torcut-v070-assets.tar.gz -C android-build/app/src/main/assets
+          curl -fL --retry 3 'https://sdmntprnorthcentralus.oaiusercontent.com/files/00000000-635c-822f-8250-137382ef6f50/raw?se=2026-10-12T16%3A51%3A37Z&sp=r&sv=2026-02-06&sr=b&scid=c8e48af1-b240-5a31-8522-8d948676da29&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T14%3A20%3A17Z&ske=2026-10-13T14%3A20%3A17Z&sks=b&skv=2026-02-06&sig=UFnwJ6ajWiefPCDTL01B4OFFeo6yFAfAYvM14iQjMzc%3D' -o android-build/app/src/main/assets/index.html
+          curl -fL --retry 3 'https://sdmntprnorthcentralus.oaiusercontent.com/files/00000000-4358-822f-91dc-d9dcb5bbcd34/raw?se=2026-10-12T16%3A51%3A43Z&sp=r&sv=2026-02-06&sr=b&scid=f26576b3-479d-5fa9-b663-9ce9a0c533e3&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T14%3A20%3A17Z&ske=2026-10-13T14%3A20%3A17Z&sks=b&skv=2026-02-06&sig=T4mgf6gGE2hqk4UZRj9QVbX8e4Qkcq8KvkfAyP5DFYA%3D' -o android-build/app/src/main/assets/styles.css
+          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-f434-81f7-91cd-5cc112cfc374/raw?se=2026-10-12T16%3A51%3A48Z&sp=r&sv=2026-02-06&sr=b&scid=472f188f-93a1-5b72-ae60-9a1f79e56696&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T13%3A50%3A03Z&ske=2026-10-13T13%3A50%3A03Z&sks=b&skv=2026-02-06&sig=bUoL%2Bd7kMFk7Jw8361e1KDOJSjMXTJ1wzYXbK31EvWQ%3D' -o android-build/app/src/main/assets/editor-core.js
+          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-f2ec-81f7-b256-5896dc5fa694/raw?se=2026-10-12T16%3A51%3A54Z&sp=r&sv=2026-02-06&sr=b&scid=0c9dfec7-7d5c-5816-8e3d-fb147abfb303&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T14%3A20%3A17Z&ske=2026-10-13T14%3A20%3A17Z&sks=b&skv=2026-02-06&sig=H02pLZxEH/f5TRUcmya0p6D3%2Bjo2oJsOuZIdusXlHy8%3D' -o android-build/app/src/main/assets/app.js
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
           a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  android-build/app/src/main/assets/index.html
           ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  android-build/app/src/main/assets/styles.css
