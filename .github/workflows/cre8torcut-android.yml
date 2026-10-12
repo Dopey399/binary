@@ -49,10 +49,19 @@ jobs:
           curl -fL --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-a220-81f5-b8b8-3ebeb341e525/raw?se=2026-10-12T00%3A46%3A51Z&sp=r&sv=2026-02-06&sr=b&scid=4e4b8ad7-d191-5fc9-8ef1-abf4ebfc4504&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-11T14%3A42%3A56Z&ske=2026-10-12T14%3A42%3A56Z&sks=b&skv=2026-02-06&sig=pmI/ejF1ttIUETconZ1EVw%2B3NztrTl4%2BV/l83X7HqxA%3D' -o /tmp/v060.patch
           echo 'f4512470ddd2307b225752571a24e1d800a9aee2c20a92340aa59793951aac27  /tmp/v060.patch' | sha256sum -c -
           patch -p1 < /tmp/v060.patch
+          python3 - <<'PYCORE'
+          from pathlib import Path
+          p = Path('android-build/app/src/main/assets/editor-core.js')
+          s = p.read_text()
+          old = "      updatedAt: timestamp,\n      tracks: DEFAULT_VIDEO_TRACKS.map(createVideoTrack)\n"
+          new = "      updatedAt: timestamp,\n      assets: [],\n      tracks: DEFAULT_VIDEO_TRACKS.map(createVideoTrack)\n"
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+          PYCORE
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
           5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  android-build/app/src/main/assets/index.html
           a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  android-build/app/src/main/assets/styles.css
-          0106e95186855851a2a0036758eadee9b7c5575205405d736acf5a73142c7130  android-build/app/src/main/assets/editor-core.js
+          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  android-build/app/src/main/assets/editor-core.js
           56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
@@ -65,6 +74,8 @@ jobs:
           let p = Core.createProject('layer-gate');
           ok(p.schemaVersion === 3, 'schema v3 missing');
           ok(Core.getVideoTracks(p).length === 3, 'three video tracks missing');
+          const history = new Core.ProjectHistory(p);
+          ok(Array.isArray(history.current().assets) && history.current().assets.length === 0, 'clean startup/history failed');
           const add = Core.addAsset(p,{name:'x.mp4',type:'video/mp4',duration:10,width:1920,height:1080,size:1,lastModified:1}); p = add.project;
           const over = Core.appendClip(p, add.assetId, {timelineStart:2, layer:{opacity:0,scale:52,x:0,y:50,blendMode:'screen'}}, 'video_2'); p = over.project;
           const clip = Core.getTrack(p,'video_2').clips[0];
@@ -146,7 +157,7 @@ jobs:
           cat > /tmp/final-assets.sha256 <<'SUMS'
           5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  /tmp/apk-assets/assets/index.html
           a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  /tmp/apk-assets/assets/styles.css
-          0106e95186855851a2a0036758eadee9b7c5575205405d736acf5a73142c7130  /tmp/apk-assets/assets/editor-core.js
+          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  /tmp/apk-assets/assets/editor-core.js
           56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
