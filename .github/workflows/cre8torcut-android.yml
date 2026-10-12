@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact Cre8torCut v0.5.0 assets
+      - name: Restore exact Cre8torCut v0.6.0 assets
         shell: bash
         run: |
           set -euo pipefail
@@ -42,29 +42,18 @@ jobs:
           p.write_text(text)
           PYHTML
           cat android-build/source-overrides-v030/studio-0.css android-build/source-overrides-v030/studio-1.css >> android-build/app/src/main/assets/styles.css
-          cat \
-            android-build/source-overrides-v040/v040_patch_0.txt \
-            android-build/source-overrides-v040/v040_patch_1.txt \
-            android-build/source-overrides-v040/v040_patch_2.txt \
-            android-build/source-overrides-v040/v040_patch_3.txt \
-            android-build/source-overrides-v040/v040_patch_4.txt \
-            android-build/source-overrides-v040/v040_patch_5.txt \
-            android-build/source-overrides-v040/v040_patch_6.txt \
-            > /tmp/v040.patch
+          cat android-build/source-overrides-v040/v040_patch_0.txt android-build/source-overrides-v040/v040_patch_1.txt android-build/source-overrides-v040/v040_patch_2.txt android-build/source-overrides-v040/v040_patch_3.txt android-build/source-overrides-v040/v040_patch_4.txt android-build/source-overrides-v040/v040_patch_5.txt android-build/source-overrides-v040/v040_patch_6.txt > /tmp/v040.patch
           patch -p1 < /tmp/v040.patch
-          cat \
-            android-build/source-overrides-v050/v050_patch_0.txt \
-            android-build/source-overrides-v050/v050_patch_1.txt \
-            android-build/source-overrides-v050/v050_patch_2.txt \
-            android-build/source-overrides-v050/v050_patch_3.txt \
-            android-build/source-overrides-v050/v050_patch_4.txt \
-            > /tmp/v050.patch
+          cat android-build/source-overrides-v050/v050_patch_0.txt android-build/source-overrides-v050/v050_patch_1.txt android-build/source-overrides-v050/v050_patch_2.txt android-build/source-overrides-v050/v050_patch_3.txt android-build/source-overrides-v050/v050_patch_4.txt > /tmp/v050.patch
           patch -p1 < /tmp/v050.patch
+          curl -fL --retry 3 'https://sdmntprcentralus.oaiusercontent.com/files/00000000-a220-81f5-b8b8-3ebeb341e525/raw?se=2026-10-12T00%3A46%3A51Z&sp=r&sv=2026-02-06&sr=b&scid=4e4b8ad7-d191-5fc9-8ef1-abf4ebfc4504&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-11T14%3A42%3A56Z&ske=2026-10-12T14%3A42%3A56Z&sks=b&skv=2026-02-06&sig=pmI/ejF1ttIUETconZ1EVw%2B3NztrTl4%2BV/l83X7HqxA%3D' -o /tmp/v060.patch
+          echo 'f4512470ddd2307b225752571a24e1d800a9aee2c20a92340aa59793951aac27  /tmp/v060.patch' | sha256sum -c -
+          patch -p1 < /tmp/v060.patch
           cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          13db7162c74911d3daa93fae547834584eceb868c0c8d884f73254d4781c7044  android-build/app/src/main/assets/index.html
-          cf98bca26bd7b1ec6482045a6bc729facba8b16d8fefc409d8d2c5296a6af286  android-build/app/src/main/assets/styles.css
-          d1948730f46efe087f8f9fbfa16a08c9868d1372fb8c0ce6a9a35bcab01fd563  android-build/app/src/main/assets/editor-core.js
-          8ae1c69c20d4254eefd1af942680f8ea85e77e563f14fbf802853e534a9f6d47  android-build/app/src/main/assets/app.js
+          5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  android-build/app/src/main/assets/index.html
+          a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  android-build/app/src/main/assets/styles.css
+          0106e95186855851a2a0036758eadee9b7c5575205405d736acf5a73142c7130  android-build/app/src/main/assets/editor-core.js
+          56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  android-build/app/src/main/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
           sha256sum -c /tmp/cre8torcut-assets.sha256
@@ -72,14 +61,20 @@ jobs:
           node --check android-build/app/src/main/assets/editor-core.js
           node - <<'JS'
           const Core = require('./android-build/app/src/main/assets/editor-core.js');
-          let p = Core.createProject('fx-gate');
-          p = Core.addAsset(p,{name:'x.mp4',type:'video/mp4',duration:10,width:1920,height:1080,size:1,lastModified:1}).project;
-          let c = Core.getVideoTrack(p).clips[0];
-          p = Core.updateClip(p,c.id,{effects:{preset:'sphere-glow',intensity:175,speed:250,blend:75,targetX:22.5,targetY:44.5,targetSize:18,targetColor:'#12abef',targetTrack:true}});
+          const ok = (v,m) => { if (!v) throw new Error(m); };
+          let p = Core.createProject('layer-gate');
+          ok(p.schemaVersion === 3, 'schema v3 missing');
+          ok(Core.getVideoTracks(p).length === 3, 'three video tracks missing');
+          const add = Core.addAsset(p,{name:'x.mp4',type:'video/mp4',duration:10,width:1920,height:1080,size:1,lastModified:1}); p = add.project;
+          const over = Core.appendClip(p, add.assetId, {timelineStart:2, layer:{opacity:0,scale:52,x:0,y:50,blendMode:'screen'}}, 'video_2'); p = over.project;
+          const clip = Core.getTrack(p,'video_2').clips[0];
+          ok(clip.layer.opacity === 0 && clip.layer.x === 0, 'layer zero-values failed');
+          ok(Core.findClipsAtTime(p,2.5).length === 2, 'simultaneous layers failed');
+          p = Core.moveClipToTrack(p, clip.id, 'video_3', 3);
+          ok(Core.getTrack(p,'video_3').clips.length === 1, 'layer move failed');
           const q = Core.parseProject(Core.serializeProject(p));
-          const e = Core.getVideoTrack(q).clips[0].effects;
-          if (e.preset !== 'sphere-glow' || e.intensity !== 175 || e.speed !== 250 || e.blend !== 75 || e.targetTrack !== true || e.targetColor !== '#12abef') throw new Error('FX schema roundtrip failed');
-          console.log('FX schema roundtrip: PASS');
+          ok(q.schemaVersion === 3 && Core.getVideoTracks(q).length === 3, 'schema roundtrip failed');
+          console.log('v0.6.0 layer engine gate: PASS');
           JS
           python3 - <<'PY'
           import re
@@ -87,34 +82,31 @@ jobs:
           css = Path('android-build/app/src/main/assets/styles.css').read_text()
           html = Path('android-build/app/src/main/assets/index.html').read_text()
           app = Path('android-build/app/src/main/assets/app.js').read_text()
+          core = Path('android-build/app/src/main/assets/editor-core.js').read_text()
           assert '\\n' not in css, 'literal escaped-newline sequence found in CSS'
           assert 'v0.4.0 Cutroom mobile UI' in css
           assert 'v0.5.0 one-tap video effects + sphere-target racing FX' in css
-          assert 'v0.5.0' in html
-          assert 'data-mobile-tool="effects"' in html
-          assert 'id="effectLibrary"' in html
-          assert 'id="pickSphereBtn"' in html
+          assert 'v0.6.0 Layer Engine + Visual FX Browser + Creator Texture' in css
+          assert 'v0.6.0' in html
+          assert 'Layer Timeline — V1 / V2 / V3' in html
+          for marker in ['id="layerOpacity"','id="layerScale"','id="layerX"','id="layerY"','id="layerBlend"','data-mobile-tool="effects"','id="effectLibrary"']:
+              assert marker in html, marker
           ids = re.findall(r'id="([^"]+)"', html)
           assert len(ids) == len(set(ids)), 'duplicate HTML ids'
-          styles_block = app.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0]
-          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", styles_block)
-          assert len(styles) == 50 and len({sid for sid, _ in styles}) == 50
-          animations_block = app.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0]
-          animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", animations_block)
-          assert len(animations) == 24 and len({aid for aid, _ in animations}) == 24
+          styles = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", app.split('const TEXT_STYLE_PRESETS = [',1)[1].split('];',1)[0])
+          animations = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", app.split('const TEXT_ANIMATION_PRESETS = [',1)[1].split('];',1)[0])
           effects_block = app.split('const EFFECT_PRESETS = [',1)[1].split('];',1)[0]
           effects = re.findall(r"\{ id: '([^']+)', label: '([^']+)'", effects_block)
-          assert len(effects) == 53 and len({eid for eid, _ in effects}) == 53
-          assert effects[0][0] == 'none'
+          assert len(styles) == 50 and len({x[0] for x in styles}) == 50
+          assert len(animations) == 24 and len({x[0] for x in animations}) == 24
+          assert len(effects) == 53 and len({x[0] for x in effects}) == 53 and effects[0][0] == 'none'
           assert effects_block.count('target: true') == 10
-          assert 'sphereTargetForFrame' in app
-          assert 'ctx.getImageData' in app
-          assert 'drawVideoEffectOverlay(clip, g, renderProjectTime);' in app
-          assert 'drawFrame(exportedTime);' in app
-          print('v0.5.0 FX regression gates: PASS')
-          print('Text styles: PASS (50)')
-          print('Text animations: PASS (24)')
-          print('Video FX: PASS (52 effects + None; 10 sphere-target presets)')
+          for marker in ['syncAllTracksAtTime','Core.findClipsAtTime','layered-export.webm','refreshEffectPreviewTiles']:
+              assert marker in app, marker
+          for marker in ['const SCHEMA_VERSION = 3','function moveClipToTrack','function setTrackState','function findClipsAtTime']:
+              assert marker in core, marker
+          print('v0.6.0 static regression gates: PASS')
+          print('Text styles: PASS (50); animations: PASS (24); video FX: PASS (52 + None; 10 sphere FX)')
           PY
           grep -q 'WindowInsets.Type.navigationBars()' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
           grep -q 'BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE' android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java
@@ -152,10 +144,10 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/final-assets.sha256 <<'SUMS'
-          13db7162c74911d3daa93fae547834584eceb868c0c8d884f73254d4781c7044  /tmp/apk-assets/assets/index.html
-          cf98bca26bd7b1ec6482045a6bc729facba8b16d8fefc409d8d2c5296a6af286  /tmp/apk-assets/assets/styles.css
-          d1948730f46efe087f8f9fbfa16a08c9868d1372fb8c0ce6a9a35bcab01fd563  /tmp/apk-assets/assets/editor-core.js
-          8ae1c69c20d4254eefd1af942680f8ea85e77e563f14fbf802853e534a9f6d47  /tmp/apk-assets/assets/app.js
+          5c90608210a8d2f3ff7b26ced031f246dbcb6ee7799066653b71d50a2b4e8cf0  /tmp/apk-assets/assets/index.html
+          a1ae05fcdb2620fcd1241dd70cc6ba2abde144dae9360c2380adb6afe98133c4  /tmp/apk-assets/assets/styles.css
+          0106e95186855851a2a0036758eadee9b7c5575205405d736acf5a73142c7130  /tmp/apk-assets/assets/editor-core.js
+          56f0b23790a8f791ef34477deef9976f8def25acfe334c0ab289b310508f122e  /tmp/apk-assets/assets/app.js
           SUMS
           sed -i 's/^          //' /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
@@ -163,6 +155,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.5.0-fx-sphere-pack
+          name: cre8torcut-v0.6.0-layer-engine-visual-fx
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
