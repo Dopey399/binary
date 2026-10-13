@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
                 }
                 pendingFiles = filePathCallback;
                 try {
-                    Intent intent = createOpenDocumentIntent(fileChooserParams);
+                    Intent intent = createMediaChooserIntent(fileChooserParams);
                     startActivityForResult(intent, FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (Throwable t) {
@@ -119,10 +119,24 @@ public class MainActivity extends Activity {
         }
     }
 
-    private Intent createOpenDocumentIntent(WebChromeClient.FileChooserParams params) {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    private Intent createMediaChooserIntent(WebChromeClient.FileChooserParams params) {
+        Intent getContentIntent = createFileIntent(Intent.ACTION_GET_CONTENT, params, false);
+        Intent openDocumentIntent = createFileIntent(Intent.ACTION_OPEN_DOCUMENT, params, true);
+
+        Intent chooser = Intent.createChooser(getContentIntent, "Choose media source");
+        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{openDocumentIntent});
+        return chooser;
+    }
+
+    private Intent createFileIntent(String action,
+                                    WebChromeClient.FileChooserParams params,
+                                    boolean persistableAccess) {
+        Intent intent = new Intent(action);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (persistableAccess) {
+            intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        }
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
                 params != null && params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
 
@@ -175,7 +189,8 @@ public class MainActivity extends Activity {
                 try {
                     getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 } catch (SecurityException ignored) {
-                    // Some providers grant temporary read access only. That is still valid for this import session.
+                    // ACTION_GET_CONTENT and some providers grant temporary read access only.
+                    // That is still valid for Cre8torCut's current import session.
                 }
             }
             if (!selected.isEmpty()) {
