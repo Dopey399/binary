@@ -29,7 +29,7 @@ jobs:
       - name: Restore exact v0.8.0 candidate from successful APK artifact
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: qa/scripts/restore-current-candidate.sh .
+        run: bash qa/scripts/restore-current-candidate.sh .
       - name: Report exact source identity
         run: sha256sum android-build/app/src/main/assets/{index.html,styles.css,editor-core.js,app.js}
 
@@ -41,7 +41,7 @@ jobs:
       - name: Restore current candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: qa/scripts/restore-current-candidate.sh .
+        run: bash qa/scripts/restore-current-candidate.sh .
       - run: node qa/scripts/core-bot.mjs
 
   ui-contract-bot:
@@ -52,7 +52,7 @@ jobs:
       - name: Restore current candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: qa/scripts/restore-current-candidate.sh .
+        run: bash qa/scripts/restore-current-candidate.sh .
       - run: node qa/scripts/ui-contract-bot.mjs
 
   browser-bot:
@@ -67,7 +67,7 @@ jobs:
       - name: Restore current candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: qa/scripts/restore-current-candidate.sh .
+        run: bash qa/scripts/restore-current-candidate.sh .
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -97,8 +97,8 @@ jobs:
       - name: Restore current candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: qa/scripts/restore-current-candidate.sh .
-      - run: qa/scripts/android-host-bot.sh .
+        run: bash qa/scripts/restore-current-candidate.sh .
+      - run: bash qa/scripts/android-host-bot.sh .
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
