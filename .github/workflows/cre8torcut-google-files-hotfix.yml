@@ -1,0 +1,96 @@
+name: Build Cre8torCut Google Files Import Hotfix
+
+on:
+  push:
+    branches:
+      - cre8torcut-android-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore exact authoritative v0.7.0 web assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf android-build/app/src/main/assets
+          mkdir -p android-build/app/src/main/assets
+          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-8fc8-81f7-9d3b-f0dfb8621f1d/raw?se=2026-10-13T10%3A34%3A08Z&sp=r&sv=2026-02-06&sr=b&scid=d4f800c9-32a6-5b73-823c-2e7cf2e28b43&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A11%3A37Z&ske=2026-10-14T00%3A11%3A37Z&sks=b&skv=2026-02-06&sig=wjXyCsX7slW3m2aFUjOQZ9nvlwvgaI8EDjlVFRQeSW0%3D' -o android-build/app/src/main/assets/index.html
+          curl -fL --retry 3 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-ff9c-81fd-8919-1b09d0460e2a/raw?se=2026-10-13T10%3A34%3A13Z&sp=r&sv=2026-02-06&sr=b&scid=024a555d-2882-5ab0-9a90-824c7da64822&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T11%3A46%3A14Z&ske=2026-10-13T11%3A46%3A14Z&sks=b&skv=2026-02-06&sig=p4EfcyLwrdZj8qnKLiSYX4yTUxnYigmvNYfk4trCTt4%3D' -o android-build/app/src/main/assets/styles.css
+          curl -fL --retry 3 'https://sdmntprnorthcentralus.oaiusercontent.com/files/00000000-2404-822f-b919-5d4541caf939/raw?se=2026-10-13T10%3A34%3A17Z&sp=r&sv=2026-02-06&sr=b&scid=356303e9-338b-564e-a3c5-573ef62fa4f2&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A11%3A34Z&ske=2026-10-14T00%3A11%3A34Z&sks=b&skv=2026-02-06&sig=XI1LTXoz0HL9SXdTgXUffHMdHQR4SufCuxb48bmKCI0%3D' -o android-build/app/src/main/assets/editor-core.js
+          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-5260-81f7-8eb0-063a214a9800/raw?se=2026-10-13T10%3A34%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=9eaa8cb8-cec9-517a-99c6-2a0b5f2288b2&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A09%3A56Z&ske=2026-10-14T00%3A09%3A56Z&sks=b&skv=2026-02-06&sig=A8uvWbXUoNMCGbtxTmAe%2BUATDIAEVCta/jVVpJIbHOc%3D' -o android-build/app/src/main/assets/app.js
+          cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
+          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  android-build/app/src/main/assets/index.html
+          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  android-build/app/src/main/assets/styles.css
+          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  android-build/app/src/main/assets/editor-core.js
+          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  android-build/app/src/main/assets/app.js
+          SUMS
+          sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
+          sha256sum -c /tmp/cre8torcut-assets.sha256
+          node --check android-build/app/src/main/assets/app.js
+          node --check android-build/app/src/main/assets/editor-core.js
+
+      - name: Verify Google Files import host patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST='android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java'
+          grep -q 'Intent.ACTION_GET_CONTENT' "$HOST"
+          grep -q 'Intent.ACTION_OPEN_DOCUMENT' "$HOST"
+          grep -q 'Intent.EXTRA_INITIAL_INTENTS' "$HOST"
+          grep -q 'Intent.EXTRA_ALLOW_MULTIPLE' "$HOST"
+          grep -q 'Intent.EXTRA_MIME_TYPES' "$HOST"
+          grep -q 'FLAG_GRANT_PERSISTABLE_URI_PERMISSION' "$HOST"
+          grep -q 'versionCode 17' android-build/app/build.gradle
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build signed APK
+        working-directory: android-build
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Verify APK and embedded exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK='android-build/app/build/outputs/apk/debug/app-debug.apk'
+          unzip -t "$APK"
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          python3 - <<'PY'
+          from pathlib import Path
+          apk = Path('android-build/app/build/outputs/apk/debug/app-debug.apk')
+          if b'APK Sig Block 42' not in apk.read_bytes():
+              raise SystemExit('missing modern APK signature block')
+          print('APK modern signature block: PASS')
+          PY
+          rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
+          unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
+          cat > /tmp/final-assets.sha256 <<'SUMS'
+          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  /tmp/apk-assets/assets/index.html
+          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  /tmp/apk-assets/assets/styles.css
+          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  /tmp/apk-assets/assets/editor-core.js
+          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  /tmp/apk-assets/assets/app.js
+          SUMS
+          sed -i 's/^          //' /tmp/final-assets.sha256
+          sha256sum -c /tmp/final-assets.sha256
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cre8torcut-v0.7.0-google-files-import-vc17
+          path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
