@@ -1,0 +1,18 @@
+{
+  "name": "cre8torcut-qa-bots",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:core": "node scripts/core-bot.mjs",
+    "test:contract": "node scripts/ui-contract-bot.mjs",
+    "test:desktop": "playwright test tests/desktop-controls.spec.mjs",
+    "test:mobile": "playwright test tests/mobile-shell.spec.mjs",
+    "test:media": "playwright test tests/media-transparency.spec.mjs",
+    "test:chaos": "playwright test tests/chaos.spec.mjs",
+    "test:buttons": "playwright test tests/button-walk.spec.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0"
+  }
+}
