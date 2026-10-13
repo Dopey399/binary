@@ -1,4 +1,4 @@
-name: Build Cre8torCut Google Files Import Hotfix
+name: Build Cre8torCut v0.8.0 Transparency Layers
 
 on:
   push:
@@ -13,39 +13,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore exact authoritative v0.7.0 web assets
+      - name: Restore exact authoritative v0.8.0 web assets
         shell: bash
         run: |
           set -euo pipefail
           rm -rf android-build/app/src/main/assets
           mkdir -p android-build/app/src/main/assets
-          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-8fc8-81f7-9d3b-f0dfb8621f1d/raw?se=2026-10-13T10%3A34%3A08Z&sp=r&sv=2026-02-06&sr=b&scid=d4f800c9-32a6-5b73-823c-2e7cf2e28b43&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A11%3A37Z&ske=2026-10-14T00%3A11%3A37Z&sks=b&skv=2026-02-06&sig=wjXyCsX7slW3m2aFUjOQZ9nvlwvgaI8EDjlVFRQeSW0%3D' -o android-build/app/src/main/assets/index.html
-          curl -fL --retry 3 'https://sdmntprwestus3.oaiusercontent.com/files/00000000-ff9c-81fd-8919-1b09d0460e2a/raw?se=2026-10-13T10%3A34%3A13Z&sp=r&sv=2026-02-06&sr=b&scid=024a555d-2882-5ab0-9a90-824c7da64822&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-12T11%3A46%3A14Z&ske=2026-10-13T11%3A46%3A14Z&sks=b&skv=2026-02-06&sig=p4EfcyLwrdZj8qnKLiSYX4yTUxnYigmvNYfk4trCTt4%3D' -o android-build/app/src/main/assets/styles.css
-          curl -fL --retry 3 'https://sdmntprnorthcentralus.oaiusercontent.com/files/00000000-2404-822f-b919-5d4541caf939/raw?se=2026-10-13T10%3A34%3A17Z&sp=r&sv=2026-02-06&sr=b&scid=356303e9-338b-564e-a3c5-573ef62fa4f2&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A11%3A34Z&ske=2026-10-14T00%3A11%3A34Z&sks=b&skv=2026-02-06&sig=XI1LTXoz0HL9SXdTgXUffHMdHQR4SufCuxb48bmKCI0%3D' -o android-build/app/src/main/assets/editor-core.js
-          curl -fL --retry 3 'https://sdmntprsouthcentralus.oaiusercontent.com/files/00000000-5260-81f7-8eb0-063a214a9800/raw?se=2026-10-13T10%3A34%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=9eaa8cb8-cec9-517a-99c6-2a0b5f2288b2&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T00%3A09%3A56Z&ske=2026-10-14T00%3A09%3A56Z&sks=b&skv=2026-02-06&sig=A8uvWbXUoNMCGbtxTmAe%2BUATDIAEVCta/jVVpJIbHOc%3D' -o android-build/app/src/main/assets/app.js
-          cat > /tmp/cre8torcut-assets.sha256 <<'SUMS'
-          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  android-build/app/src/main/assets/index.html
-          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  android-build/app/src/main/assets/styles.css
-          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  android-build/app/src/main/assets/editor-core.js
-          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  android-build/app/src/main/assets/app.js
+          curl -fL --retry 3 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-39d8-81f4-aa2e-718b7dab196a/raw?se=2026-10-13T15%3A50%3A00Z&sp=r&sv=2026-02-06&sr=b&scid=7666b840-a491-5f2d-91f7-5466c74922a0&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T13%3A53%3A41Z&ske=2026-10-14T13%3A53%3A41Z&sks=b&skv=2026-02-06&sig=Tae0y7exBowW4Z3NmRdkS3J4lN2pGSX%2Bm%2BnDJTS2nJY%3D' -o android-build/app/src/main/assets/index.html
+          curl -fL --retry 3 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-6454-81f4-9038-7d809df93474/raw?se=2026-10-13T15%3A50%3A04Z&sp=r&sv=2026-02-06&sr=b&scid=0b9ad694-b887-5073-9ab9-c54fd8dfc2fb&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T13%3A16%3A10Z&ske=2026-10-14T13%3A16%3A10Z&sks=b&skv=2026-02-06&sig=xoKJ0X/5IdUJs2VJIMx50Ddir8eXtXdRlgopRkk8%2BtM%3D' -o android-build/app/src/main/assets/styles.css
+          curl -fL --retry 3 'https://sdmntprnorthcentralus.oaiusercontent.com/files/00000000-9b10-822f-8783-90b59035d9bf/raw?se=2026-10-13T15%3A50%3A08Z&sp=r&sv=2026-02-06&sr=b&scid=9bcddf2c-3d0f-5f2e-b271-f412385cd79a&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T12%3A08%3A19Z&ske=2026-10-14T12%3A08%3A19Z&sks=b&skv=2026-02-06&sig=uEwH%2BrD7VxuQzRi3bPsarEp7kID5MoY%2B5RSscfFbP0A%3D' -o android-build/app/src/main/assets/editor-core.js
+          curl -fL --retry 3 'https://sdmntprwestus2.oaiusercontent.com/files/00000000-b378-81f8-81fc-f6c0415da25b/raw?se=2026-10-13T15%3A50%3A12Z&sp=r&sv=2026-02-06&sr=b&scid=4f9e473b-507a-5bb1-adf1-dd3d68d8a268&skoid=db055408-822b-485f-92f8-bfeb3ea92408&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-13T12%3A08%3A21Z&ske=2026-10-14T12%3A08%3A21Z&sks=b&skv=2026-02-06&sig=RJZYVqUZQK/bSBo6AKgbjOVXDPNjG9/1EPoV89To8ME%3D' -o android-build/app/src/main/assets/app.js
+          cat > /tmp/assets.sha256 <<'SUMS'
+          3e1feaac8691da8829b702ace88f61babdd7e280df7f1fd1b9c199ce792edca3  android-build/app/src/main/assets/index.html
+          98b260e79aaaca361237e14addeb05df8ced18ded9d50bb136d6cfe173ac62cc  android-build/app/src/main/assets/styles.css
+          1f21f2be66fc8625ea36c0941f8c740d7267d637791d4f9318ab8885a54952ec  android-build/app/src/main/assets/editor-core.js
+          0d61c05d0cdcbdf45365ae1a6c5dbd8132c89f746942e6e0c58d3cc25a1dd26e  android-build/app/src/main/assets/app.js
           SUMS
-          sed -i 's/^          //' /tmp/cre8torcut-assets.sha256
-          sha256sum -c /tmp/cre8torcut-assets.sha256
+          sed -i 's/^          //' /tmp/assets.sha256
+          sha256sum -c /tmp/assets.sha256
           node --check android-build/app/src/main/assets/app.js
           node --check android-build/app/src/main/assets/editor-core.js
+          grep -q 'accept="video/\*,image/\*"' android-build/app/src/main/assets/index.html
+          grep -q 'id="keyEnabled"' android-build/app/src/main/assets/index.html
+          grep -q 'probeImageFile' android-build/app/src/main/assets/app.js
+          grep -q 'colorKeyRenderer' android-build/app/src/main/assets/app.js
+          grep -q 'keyEnabled: false' android-build/app/src/main/assets/editor-core.js
+          node - <<'JS'
+          const Core = require('./android-build/app/src/main/assets/editor-core.js');
+          let p = Core.createProject('transparency-gate');
+          const add = Core.addAsset(p,{name:'overlay.png',type:'image/png',duration:5,width:800,height:600,size:1,lastModified:1},{trackId:'video_2',clip:{timelineStart:1,effects:{keyEnabled:true,keyColor:'#00ff00',keyTolerance:27,keySoftness:19},layer:{opacity:82,scale:64,x:70,y:35,blendMode:'screen'}}});
+          p = add.project;
+          const q = Core.parseProject(Core.serializeProject(p));
+          const clip = Core.findClipLocation(q, add.clipId).clip;
+          if (!clip.effects.keyEnabled || clip.effects.keyTolerance !== 27 || clip.effects.keySoftness !== 19) throw new Error('transparency persistence failed');
+          if (Core.getVideoTracks(q).length !== 3 || clip.layer.opacity !== 82 || clip.layer.blendMode !== 'screen') throw new Error('layer regression');
+          console.log('transparency + three-layer gate: PASS');
+          JS
 
-      - name: Verify Google Files import host patch
+      - name: Verify Android host and version
         shell: bash
         run: |
           set -euo pipefail
           HOST='android-build/app/src/main/java/com/cre8torcut/mobile/MainActivity.java'
           grep -q 'Intent.ACTION_GET_CONTENT' "$HOST"
           grep -q 'Intent.ACTION_OPEN_DOCUMENT' "$HOST"
-          grep -q 'Intent.EXTRA_INITIAL_INTENTS' "$HOST"
-          grep -q 'Intent.EXTRA_ALLOW_MULTIPLE' "$HOST"
-          grep -q 'Intent.EXTRA_MIME_TYPES' "$HOST"
-          grep -q 'FLAG_GRANT_PERSISTABLE_URI_PERMISSION' "$HOST"
-          grep -q 'versionCode 17' android-build/app/build.gradle
+          grep -q 'versionCode 18' android-build/app/build.gradle
+          grep -q "versionName '0.8.0'" android-build/app/build.gradle
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -73,24 +86,17 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           apk = Path('android-build/app/build/outputs/apk/debug/app-debug.apk')
-          if b'APK Sig Block 42' not in apk.read_bytes():
-              raise SystemExit('missing modern APK signature block')
+          if b'APK Sig Block 42' not in apk.read_bytes(): raise SystemExit('missing modern APK signature block')
           print('APK modern signature block: PASS')
           PY
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
-          cat > /tmp/final-assets.sha256 <<'SUMS'
-          a5c6c94bd59890bb94208c9eed401882416c81477e7072b10a8d63f06372e3a5  /tmp/apk-assets/assets/index.html
-          ea82cfd85d6840dbf0adf1754759db0059f5404958babfec383c7149f718534c  /tmp/apk-assets/assets/styles.css
-          e2cea053f9d8199a2293557e48c1e85f2532f43e97a8bf554a5a7f1912bde83e  /tmp/apk-assets/assets/editor-core.js
-          3579a7febf94c7221e4aedcfb7bb1073e9d5e1929893071711e8c6cfc7426767  /tmp/apk-assets/assets/app.js
-          SUMS
-          sed -i 's/^          //' /tmp/final-assets.sha256
+          sed 's#android-build/app/src/main/assets/#/tmp/apk-assets/assets/#' /tmp/assets.sha256 > /tmp/final-assets.sha256
           sha256sum -c /tmp/final-assets.sha256
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: cre8torcut-v0.7.0-google-files-import-vc17
+          name: cre8torcut-v0.8.0-transparency-layers-vc18
           path: android-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
