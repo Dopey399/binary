@@ -1,0 +1,152 @@
+name: Cre8torCut QA Bots
+
+on:
+  push:
+    branches: [cre8torcut-android-build]
+    paths:
+      - 'qa/**'
+      - 'android-build/app/**'
+      - '.github/workflows/cre8torcut-qa-bots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cre8torcut-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CANDIDATE_ARTIFACT_ID: '11827753664'
+
+jobs:
+  source-truth-bot:
+    name: source-truth-bot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore exact v0.8.0 candidate from successful APK artifact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: qa/scripts/restore-current-candidate.sh .
+      - name: Report exact source identity
+        run: sha256sum android-build/app/src/main/assets/{index.html,styles.css,editor-core.js,app.js}
+
+  core-model-bot:
+    name: core-model-bot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore current candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: qa/scripts/restore-current-candidate.sh .
+      - run: node qa/scripts/core-bot.mjs
+
+  ui-contract-bot:
+    name: ui-contract-bot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore current candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: qa/scripts/restore-current-candidate.sh .
+      - run: node qa/scripts/ui-contract-bot.mjs
+
+  browser-bot:
+    name: browser-bot / ${{ matrix.bot }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bot: [desktop, buttons, mobile, media, chaos]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore current candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: qa/scripts/restore-current-candidate.sh .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install QA runner
+        working-directory: qa
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        working-directory: qa
+        run: npx playwright install --with-deps chromium
+      - name: Run ${{ matrix.bot }} bot
+        working-directory: qa
+        run: npm run test:${{ matrix.bot }}
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ matrix.bot }}-${{ github.run_id }}
+          path: qa/artifacts
+          if-no-files-found: ignore
+          retention-days: 30
+
+  android-host-bot:
+    name: android-host-bot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore current candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: qa/scripts/restore-current-candidate.sh .
+      - run: qa/scripts/android-host-bot.sh .
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile debug APK
+        working-directory: android-build
+        run: gradle --no-daemon :app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qa-built-apk-${{ github.run_id }}
+          path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  apk-package-bot:
+    name: apk-package-bot
+    needs: android-host-bot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-built-apk-${{ github.run_id }}
+          path: /tmp/qa-apk
+      - name: Verify package, signature, and embedded current source
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK='/tmp/qa-apk/app-debug.apk'
+          unzip -t "$APK"
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          python3 - <<'PY'
+          from pathlib import Path
+          apk = Path('/tmp/qa-apk/app-debug.apk')
+          if b'APK Sig Block 42' not in apk.read_bytes():
+              raise SystemExit('missing modern APK signature block')
+          print('modern APK signature block: PASS')
+          PY
+          rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
+          unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
+          cat > /tmp/assets.sha256 <<'SUMS'
+          3e1feaac8691da8829b702ace88f61babdd7e280df7f1fd1b9c199ce792edca3  /tmp/apk-assets/assets/index.html
+          98b260e79aaaca361237e14addeb05df8ced18ded9d50bb136d6cfe173ac62cc  /tmp/apk-assets/assets/styles.css
+          1f21f2be66fc8625ea36c0941f8c740d7267d637791d4f9318ab8885a54952ec  /tmp/apk-assets/assets/editor-core.js
+          0d61c05d0cdcbdf45365ae1a6c5dbd8132c89f746942e6e0c58d3cc25a1dd26e  /tmp/apk-assets/assets/app.js
+          SUMS
+          sha256sum -c /tmp/assets.sha256
