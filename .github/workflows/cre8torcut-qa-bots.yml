@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CANDIDATE_ARTIFACT_ID: '11827753664'
+  BASE_CANDIDATE_ARTIFACT_ID: '11827753664'
 
 jobs:
   source-truth-bot:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore exact v0.8.0 candidate from successful APK artifact
+      - name: Restore v0.8.0 base and apply exact v0.9.0 source patch
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: bash qa/scripts/restore-current-candidate.sh .
@@ -126,7 +126,7 @@ jobs:
         with:
           name: qa-built-apk-${{ github.run_id }}
           path: /tmp/qa-apk
-      - name: Verify package, signature, and embedded current source
+      - name: Verify package, signature, and embedded v0.9.0 source
         shell: bash
         run: |
           set -euo pipefail
@@ -144,9 +144,9 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/assets.sha256 <<'SUMS'
-          3e1feaac8691da8829b702ace88f61babdd7e280df7f1fd1b9c199ce792edca3  /tmp/apk-assets/assets/index.html
-          98b260e79aaaca361237e14addeb05df8ced18ded9d50bb136d6cfe173ac62cc  /tmp/apk-assets/assets/styles.css
-          1f21f2be66fc8625ea36c0941f8c740d7267d637791d4f9318ab8885a54952ec  /tmp/apk-assets/assets/editor-core.js
-          0d61c05d0cdcbdf45365ae1a6c5dbd8132c89f746942e6e0c58d3cc25a1dd26e  /tmp/apk-assets/assets/app.js
+          7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  /tmp/apk-assets/assets/index.html
+          8e9a43f5120ef2bb69314c7d17804a778e4cc8015ca4031ad06ab47bbec4559e  /tmp/apk-assets/assets/styles.css
+          72ecb368da5b4207b54538470938d70f30414ffbe227775eaf63d21f426b0d86  /tmp/apk-assets/assets/editor-core.js
+          17e8d33f294278bcc0cc696fc3a281b30d1cdde88c08d2e8fe154add9d0bff26  /tmp/apk-assets/assets/app.js
           SUMS
           sha256sum -c /tmp/assets.sha256
