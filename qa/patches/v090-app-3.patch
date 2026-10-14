@@ -1,0 +1,98 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1179,7 +1305,8 @@
+     timelineStage.style.minHeight = `${24 + orderedForDisplay.length * rowHeight + audioHeight}px`;
+     scrubber.max = String(Math.max(total, 0.001));
+     durationLabel.textContent = fmt(total);
+-    if (timelineZoomLabel) timelineZoomLabel.textContent = `${timelineZoomIndex + 1}×`;
++    if (timelineZoomLabel) timelineZoomLabel.textContent = `${timelinePixelsPerSecond()} px/s`;
++    renderReplayMarkers();
+     updateTransportUI();
+   }
+ 
+@@ -1191,6 +1318,7 @@
+     if (timelineStage) playhead.style.left = `${timelineTrackRailWidth() + projectTime * timelinePixelsPerSecond()}px`;
+     else playhead.style.left = `${total > 0 ? (projectTime / total) * 100 : 0}%`;
+     if (projectPlaying) keepPlayheadInView(false);
++    updatePreviewTransformOverlay();
+   }
+ 
+   function clipDraftFromControls(baseClip) {
+@@ -2007,6 +2135,56 @@
+     return extra ? `${base} ${extra}` : base;
+   }
+ 
++  const toonSurface = document.createElement('canvas');
++  const toonCtx = toonSurface.getContext('2d', { willReadFrequently: true });
++
++  function toonRenderer(source, sourceW, sourceH, effects, variant = 'toon-cel') {
++    const maxW = 420;
++    const scale = Math.min(1, maxW / Math.max(1, sourceW));
++    const w = Math.max(2, Math.round(sourceW * scale));
++    const h = Math.max(2, Math.round(sourceH * scale));
++    if (toonSurface.width !== w || toonSurface.height !== h) {
++      toonSurface.width = w;
++      toonSurface.height = h;
++    }
++    toonCtx.clearRect(0, 0, w, h);
++    toonCtx.drawImage(source, 0, 0, w, h);
++    let image;
++    try { image = toonCtx.getImageData(0, 0, w, h); } catch (_) { return source; }
++    const d = image.data;
++    const original = new Uint8ClampedArray(d);
++    const intensity = Core.clamp(Number(effects?.intensity ?? 100), 0, 200) / 100;
++    const levels = variant === 'comic-ink-video' ? 5 : variant === 'toon-sketch' ? 8 : 6;
++    const step = 255 / Math.max(2, levels - Math.min(2, Math.floor(intensity)));
++    const edgeThreshold = variant === 'comic-ink-video' ? 42 : variant === 'toon-sketch' ? 28 : 54;
++    const edgePower = variant === 'comic-ink-video' ? 1.35 : 1;
++    const lumAt = (idx) => original[idx] * .299 + original[idx + 1] * .587 + original[idx + 2] * .114;
++    for (let y = 1; y < h - 1; y++) {
++      for (let x = 1; x < w - 1; x++) {
++        const i = (y * w + x) * 4;
++        if (original[i + 3] === 0) continue;
++        const left = lumAt(i - 4), right = lumAt(i + 4);
++        const up = lumAt(i - w * 4), down = lumAt(i + w * 4);
++        const edge = Math.min(255, Math.hypot(right - left, down - up) * edgePower);
++        if (variant === 'toon-sketch') {
++          const gray = lumAt(i);
++          const paper = Core.clamp(255 - edge * (1.65 + intensity * .45) - (255 - gray) * .18, 0, 255);
++          d[i] = d[i + 1] = d[i + 2] = paper;
++        } else if (edge > edgeThreshold / Math.max(.45, intensity || .45)) {
++          const ink = variant === 'comic-ink-video' ? 5 : 14;
++          d[i] = d[i + 1] = d[i + 2] = ink;
++        } else {
++          d[i] = Math.round(original[i] / step) * step;
++          d[i + 1] = Math.round(original[i + 1] / step) * step;
++          d[i + 2] = Math.round(original[i + 2] / step) * step;
++        }
++        d[i + 3] = original[i + 3];
++      }
++    }
++    toonCtx.putImageData(image, 0, 0);
++    return toonSurface;
++  }
++
+   function drawVideoSourceLayer(clip, g, options = {}, mediaEl = video) {
+     if (!mediaEl) return;
+     const isVideo = typeof mediaEl.readyState === 'number';
+@@ -2016,6 +2194,10 @@
+     if (clip.effects?.keyEnabled === true && !options.disableKey) {
+       drawSource = colorKeyRenderer(mediaEl, g.sourceW, g.sourceH, clip.effects);
+     }
++    const activeEffectId = options.effectId || clip.effects?.preset || 'none';
++    if (activeEffectId === 'toon-cel' || activeEffectId === 'comic-ink-video' || activeEffectId === 'toon-sketch') {
++      drawSource = toonRenderer(drawSource, g.sourceW, g.sourceH, clip.effects, activeEffectId);
++    }
+     ctx.save();
+     ctx.globalAlpha = options.alpha ?? 1;
+     ctx.globalCompositeOperation = options.composite || 'source-over';
+@@ -2988,7 +3170,8 @@
+   scrubber.addEventListener('change', () => seekProject(Number(scrubber.value)).catch(console.error));
+ 
+   timeline.addEventListener('click', (event) => {
+-    if (!Core.allClipPlacements(project).length || event.target.closest('.timeline-clip') || event.target.closest('.track-rail')) return;
++    if (timelineWasScrubbed) { timelineWasScrubbed = false; return; }
++    if (!Core.allClipPlacements(project).length || event.target.closest('.timeline-clip') || event.target.closest('.track-rail') || event.target.closest('.replay-marker')) return;
+     const rect = (timelineStage || timeline).getBoundingClientRect();
+     const seconds = Core.clamp((event.clientX - rect.left - timelineTrackRailWidth()) / timelinePixelsPerSecond(), 0, Core.projectDuration(project));
+     pausePlayback();
