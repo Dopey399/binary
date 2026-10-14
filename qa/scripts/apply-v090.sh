@@ -22,11 +22,27 @@ PY
   git apply "$tmp"
   rm -f "$tmp"
 done
+python3 - <<'PY'
+from pathlib import Path
+p = Path('android-build/app/src/main/assets/app.js')
+s = p.read_text()
+replacements = {
+"    previewTransformBox?.setPointerCapture?.(event.pointerId); event.preventDefault();": "    try { previewTransformBox?.setPointerCapture?.(event.pointerId); } catch (_) {} event.preventDefault();",
+"  timeline?.addEventListener('pointerdown', (event) => {\n    if (event.pointerType === 'mouse' && event.button !== 0) return;\n    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); timeline.setPointerCapture?.(event.pointerId);": "  timeline?.addEventListener('pointerdown', (event) => {\n    if (event.pointerType === 'mouse' && event.button !== 0) return;\n    if (event.target.closest('.timeline-clip') || event.target.closest('.track-rail') || event.target.closest('.replay-marker')) return;\n    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); try { timeline.setPointerCapture?.(event.pointerId); } catch (_) {}",
+"handle.setPointerCapture?.(event.pointerId);": "try { handle.setPointerCapture?.(event.pointerId); } catch (_) {}",
+"timelineResizeGrip.setPointerCapture?.(event.pointerId);": "try { timelineResizeGrip.setPointerCapture?.(event.pointerId); } catch (_) {}",
+}
+for old, new in replacements.items():
+    if old not in s:
+        raise SystemExit(f'missing v0.9.0 fixup target: {old[:72]}')
+    s = s.replace(old, new)
+p.write_text(s)
+PY
 cat > /tmp/cre8torcut-v090.sha256 <<'SUMS'
 7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  android-build/app/src/main/assets/index.html
 8e9a43f5120ef2bb69314c7d17804a778e4cc8015ca4031ad06ab47bbec4559e  android-build/app/src/main/assets/styles.css
 72ecb368da5b4207b54538470938d70f30414ffbe227775eaf63d21f426b0d86  android-build/app/src/main/assets/editor-core.js
-17e8d33f294278bcc0cc696fc3a281b30d1cdde88c08d2e8fe154add9d0bff26  android-build/app/src/main/assets/app.js
+b7e180cd11f2582a8e000d814115f3eafa7f1eb17e67cb6af91a9186856bcbf8  android-build/app/src/main/assets/app.js
 SUMS
 sha256sum -c /tmp/cre8torcut-v090.sha256
 node --check android-build/app/src/main/assets/editor-core.js
