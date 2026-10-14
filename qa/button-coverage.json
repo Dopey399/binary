@@ -12,6 +12,7 @@
   "focusPreviewBtn": "mobile-shell + direct-manipulation",
   "previewRotateHandle": "direct-manipulation",
   "previewDeleteHandle": "direct-manipulation",
+  "previewModeHandle": "mobile-shell",
   "creatorMakeCoolBtn": "desktop-controls + button-walk",
   "creatorTryAnotherBtn": "button-walk",
   "creatorAdvancedBtn": "button-walk",
