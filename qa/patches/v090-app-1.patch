@@ -1,0 +1,63 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -30,6 +30,16 @@
+   const timelineZoomBtn = $('timelineZoomBtn');
+   const timelineZoomLabel = $('timelineZoomLabel');
+   const timelineSummary = $('timelineSummary');
++  const replayMarkers = $('replayMarkers');
++  const replayDataInput = $('replayDataInput');
++  const previewTransformBox = $('previewTransformBox');
++  const previewRotateHandle = $('previewRotateHandle');
++  const previewDeleteHandle = $('previewDeleteHandle');
++  const mediaResizeHandle = $('mediaResizeHandle');
++  const inspectorResizeHandle = $('inspectorResizeHandle');
++  const timelineResizeGrip = $('timelineResizeGrip');
++  const focusPreviewBtn = $('focusPreviewBtn');
++  const workspace = document.querySelector('.workspace');
+   const mediaList = $('mediaList');
+   const mediaCount = $('mediaCount');
+   const projectName = $('projectName');
+@@ -137,8 +147,8 @@
+   let captureGain = null;
+   let captureDestination = null;
+   const AUTOSAVE_KEY = 'cre8torcut.autosave.v3';
+-  const TIMELINE_ZOOM_LEVELS = [32, 48, 72];
+-  let timelineZoomIndex = 1;
++  const TIMELINE_ZOOM_LEVELS = [8, 16, 32, 48, 72, 120, 240, 480];
++  let timelineZoomIndex = 3;
+   const runtimeFxTargets = new Map();
+   let fxPickMode = false;
+   let keyPickMode = false;
+@@ -150,6 +160,13 @@
+   let wheelGestureBaseProject = null;
+   let wheelGestureTimer = 0;
+   let wheelHudTimer = 0;
++  let replayBridgePayload = null;
++  let timelineWasScrubbed = false;
++  let timelineScrubPointerId = null;
++  let timelineScrubStartX = 0;
++  let transformGestureBaseProject = null;
++  let transformGesture = null;
++  let timelinePinchDistance = 0;
+ 
+   function timelinePixelsPerSecond() { return TIMELINE_ZOOM_LEVELS[timelineZoomIndex] || 48; }
+   function timelineTrackRailWidth() {
+@@ -304,6 +321,9 @@
+     { id: 'thermal', label: 'Thermal', group: 'look' },
+     { id: 'comic-burst', label: 'Comic Burst', group: 'look' },
+     { id: 'toxic-glow', label: 'Toxic Glow', group: 'look' },
++    { id: 'toon-cel', label: 'Cartoon / Cel Shade', group: 'toon' },
++    { id: 'comic-ink-video', label: 'Comic Ink', group: 'toon' },
++    { id: 'toon-sketch', label: 'Pencil Toon', group: 'toon' },
+     { id: 'sphere-glow', label: 'Sphere Glow', group: 'sphere', target: true },
+     { id: 'sphere-pulse', label: 'Sphere Pulse', group: 'sphere', target: true },
+     { id: 'sphere-halo', label: 'Sphere Halo', group: 'sphere', target: true },
+@@ -316,7 +336,7 @@
+     { id: 'sphere-target', label: 'Sphere Target Highlight', group: 'sphere', target: true }
+   ];
+   const EFFECT_MAP = new Map(EFFECT_PRESETS.map((item) => [item.id, item]));
+-  const FEATURED_EFFECT_IDS = ['static-burst', 'fire-edge', 'speed-lines', 'turbo-boost', 'glitch-flash', 'retro-film', 'sphere-glow', 'sphere-lock-on', 'sphere-trail', 'sphere-shockwave'];
++  const FEATURED_EFFECT_IDS = ['toon-cel', 'comic-ink-video', 'static-burst', 'fire-edge', 'speed-lines', 'turbo-boost', 'glitch-flash', 'retro-film', 'sphere-glow', 'sphere-lock-on'];
+ 
+   const CREATOR_RECIPES = [
+     { id: 'make-it-cool', label: 'Make It Cool', icon: '✨', group: 'smart', description: 'Fast neon polish with stronger color and glow.', effect: 'cyberpunk-glow', brightness: 104, contrast: 114, saturation: 125, fxIntensity: 115, fxSpeed: 110, fxBlend: 72 },
