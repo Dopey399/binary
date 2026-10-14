@@ -45,12 +45,22 @@ check('add overlay with layer/transparency state', () => {
   assert.equal(clip.effects.keyTolerance, 27);
   assert.equal(clip.layer.opacity, 82);
   assert.equal(clip.layer.blendMode, 'screen');
+  assert.deepEqual([clip.layer.cropX, clip.layer.cropY, clip.layer.cropWidth, clip.layer.cropHeight], [0, 0, 100, 100]);
+});
+
+check('crop state changes independently from whole-layer transform', () => {
+  const before = Core.findClipLocation(p, a2.clipId).clip;
+  const beforeTransform = [before.layer.scale, before.layer.x, before.layer.y];
+  p = Core.updateClip(p, a2.clipId, { layer: { cropX: 12, cropY: 8, cropWidth: 55, cropHeight: 62 } });
+  const clip = Core.findClipLocation(p, a2.clipId).clip;
+  assert.deepEqual([clip.layer.cropX, clip.layer.cropY, clip.layer.cropWidth, clip.layer.cropHeight], [12, 8, 55, 62]);
+  assert.deepEqual([clip.layer.scale, clip.layer.x, clip.layer.y], beforeTransform);
 });
 
 check('clip normalization clamps invalid edits', () => {
   p = Core.updateClip(p, a2.clipId, {
     effects: { keyTolerance: 999, keySoftness: -5 },
-    layer: { opacity: 999, scale: 1, x: -2, y: 500, blendMode: 'not-real' }
+    layer: { opacity: 999, scale: 1, x: -2, y: 500, cropX: 98, cropWidth: 99, cropY: -4, cropHeight: 150, blendMode: 'not-real' }
   });
   const clip = Core.findClipLocation(p, a2.clipId).clip;
   assert.equal(clip.effects.keyTolerance, 100);
@@ -59,6 +69,10 @@ check('clip normalization clamps invalid edits', () => {
   assert.equal(clip.layer.scale, 10);
   assert.equal(clip.layer.x, 0);
   assert.equal(clip.layer.y, 100);
+  assert.equal(clip.layer.cropX, 95);
+  assert.equal(clip.layer.cropWidth, 5);
+  assert.equal(clip.layer.cropY, 0);
+  assert.equal(clip.layer.cropHeight, 100);
   assert.equal(clip.layer.blendMode, 'normal');
 });
 
@@ -92,11 +106,13 @@ check('track state lock blocks clip mutation', () => {
   p = Core.setTrackState(p, 'video_2', { locked: false });
 });
 
-check('serialize/parse preserves layered transparency', () => {
+check('serialize/parse preserves layered transparency and crop', () => {
   const q = Core.parseProject(Core.serializeProject(p));
   const clip = Core.findClipLocation(q, a2.clipId).clip;
   assert.equal(clip.effects.keyEnabled, true);
   assert.equal(clip.layer.opacity, 100);
+  assert.equal(clip.layer.cropX, 95);
+  assert.equal(clip.layer.cropWidth, 5);
   assert.equal(Core.getVideoTracks(q).length, 3);
   p = q;
 });
@@ -127,6 +143,7 @@ check('legacy v2 project migrates into three tracks', () => {
   assert.equal(migrated.schemaVersion, 3);
   assert.equal(Core.getVideoTracks(migrated).length, 3);
   assert.equal(Core.getVideoTrack(migrated, 'video_1').clips.length, 1);
+  assert.deepEqual([Core.getVideoTrack(migrated, 'video_1').clips[0].layer.cropX, Core.getVideoTrack(migrated, 'video_1').clips[0].layer.cropWidth], [0, 100]);
 });
 
 check('invalid app/project references fail closed', () => {
