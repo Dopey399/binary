@@ -35,7 +35,7 @@ for (const [, attrs, body] of buttonMatches) {
     staticButtonIds.push(id);
     assert(coverage[id], `button #${id} is not assigned to a QA bot in button-coverage.json`);
   } else {
-    const generic = /data-(?:close-mobile-sheet|mobile-action|mobile-tool|mobile-sheet)(?:=|\s)/i.test(attrs);
+    const generic = /data-(?:close-mobile-sheet|mobile-action|mobile-tool|mobile-sheet|transform)(?:=|\s)/i.test(attrs);
     assert(generic, `anonymous button is not covered by a generic delegated handler: ${text || attrs}`);
     genericButtons += 1;
   }
@@ -47,12 +47,15 @@ const requiredIds = [
   'videoInput', 'projectInput', 'previewCanvas', 'timeline', 'timelineClips',
   'creatorModeBtn', 'splitBtn', 'deleteClipBtn', 'layerUpBtn', 'layerDownBtn',
   'keyEnabled', 'keyColor', 'keyTolerance', 'keySoftness', 'pickKeyColorBtn',
-  'effectBtn', 'pickSphereBtn', 'exportBtn'
+  'effectBtn', 'pickSphereBtn', 'exportBtn', 'previewTransformBox', 'focusPreviewBtn',
+  'timelineResizeGrip', 'replayDataInput', 'replayMarkers'
 ];
 for (const id of requiredIds) assert(unique.has(id), `critical UI contract missing #${id}`);
 
 assert(/accept="video\/\*,image\/\*"/.test(html), 'media picker no longer accepts image + video');
 assert(/colorKeyRenderer/.test(app), 'color-key renderer wiring missing');
+assert(/toonRenderer/.test(app), 'toon renderer wiring missing');
+assert(/Cre8torCutReplayBridge/.test(app), 'generic replay bridge wiring missing');
 assert(/probeImageFile/.test(app), 'image import path missing');
 assert(/data-mobile-tool="effects"/.test(html), 'mobile Effects tool missing');
 assert(/\.inspector\[data-active-tool="effects"\]/.test(styles), 'mobile Effects visibility CSS missing');
