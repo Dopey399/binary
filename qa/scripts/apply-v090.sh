@@ -31,6 +31,7 @@ replacements = {
 "  timeline?.addEventListener('pointerdown', (event) => {\n    if (event.pointerType === 'mouse' && event.button !== 0) return;\n    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); timeline.setPointerCapture?.(event.pointerId);": "  timeline?.addEventListener('pointerdown', (event) => {\n    if (event.pointerType === 'mouse' && event.button !== 0) return;\n    if (event.target.closest('.timeline-clip') || event.target.closest('.track-rail') || event.target.closest('.replay-marker')) return;\n    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); try { timeline.setPointerCapture?.(event.pointerId); } catch (_) {}",
 "handle.setPointerCapture?.(event.pointerId);": "try { handle.setPointerCapture?.(event.pointerId); } catch (_) {}",
 "timelineResizeGrip.setPointerCapture?.(event.pointerId);": "try { timelineResizeGrip.setPointerCapture?.(event.pointerId); } catch (_) {}",
+"  beforeAfterBtn?.addEventListener('pointerdown', (event) => { event.preventDefault(); beforeAfterBtn.setPointerCapture?.(event.pointerId); setOriginalPreview(true); });": "  beforeAfterBtn?.addEventListener('pointerdown', (event) => { event.preventDefault(); try { beforeAfterBtn.setPointerCapture?.(event.pointerId); } catch (_) {} setOriginalPreview(true); });",
 }
 for old, new in replacements.items():
     if old not in s:
@@ -42,7 +43,7 @@ cat > /tmp/cre8torcut-v090.sha256 <<'SUMS'
 7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  android-build/app/src/main/assets/index.html
 8e9a43f5120ef2bb69314c7d17804a778e4cc8015ca4031ad06ab47bbec4559e  android-build/app/src/main/assets/styles.css
 72ecb368da5b4207b54538470938d70f30414ffbe227775eaf63d21f426b0d86  android-build/app/src/main/assets/editor-core.js
-b7e180cd11f2582a8e000d814115f3eafa7f1eb17e67cb6af91a9186856bcbf8  android-build/app/src/main/assets/app.js
+7f7de7128b1b34e61858c6dd79e0bcbafe1558db112b2ff9a0389857115d550a  android-build/app/src/main/assets/app.js
 SUMS
 sha256sum -c /tmp/cre8torcut-v090.sha256
 node --check android-build/app/src/main/assets/editor-core.js
