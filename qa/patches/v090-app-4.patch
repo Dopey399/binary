@@ -1,0 +1,48 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -3236,6 +3419,33 @@
+     keepPlayheadInView(true);
+   });
+ 
++  timeline?.addEventListener('pointerdown', (event) => {
++    if (event.pointerType === 'mouse' && event.button !== 0) return;
++    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); timeline.setPointerCapture?.(event.pointerId);
++  });
++  timeline?.addEventListener('pointermove', (event) => {
++    if (timelineScrubPointerId !== event.pointerId || Math.abs(event.clientX - timelineScrubStartX) < 4) return;
++    timelineWasScrubbed = true; const rect = timelineStage.getBoundingClientRect();
++    const seconds = Core.clamp((event.clientX - rect.left - timelineTrackRailWidth()) / timelinePixelsPerSecond(), 0, Core.projectDuration(project));
++    projectTime = seconds; updateTransportUI(); syncAllTracksAtTime(projectTime, { play:false }).then(() => drawFrame(projectTime)).catch(console.error); event.preventDefault();
++  });
++  const endTimelinePointer = (event) => { if (timelineScrubPointerId !== event.pointerId) return; timelineScrubPointerId = null; if (timelineWasScrubbed) seekProject(projectTime).catch(console.error); };
++  timeline?.addEventListener('pointerup', endTimelinePointer); timeline?.addEventListener('pointercancel', endTimelinePointer);
++  timeline?.addEventListener('touchstart', (event) => { if (event.touches.length===2) timelinePinchDistance=Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY); }, {passive:true});
++  timeline?.addEventListener('touchmove', (event) => { if(event.touches.length!==2||!timelinePinchDistance)return; const distance=Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY); const delta=distance-timelinePinchDistance; if(Math.abs(delta)<18)return; const nextIndex=Core.clamp(timelineZoomIndex+(delta>0?1:-1),0,TIMELINE_ZOOM_LEVELS.length-1); if(nextIndex!==timelineZoomIndex){timelineZoomIndex=nextIndex;renderTimeline();keepPlayheadInView(true);} timelinePinchDistance=distance; event.preventDefault(); }, {passive:false});
++  timeline?.addEventListener('touchend',()=>{timelinePinchDistance=0;},{passive:true});
++
++  previewTransformBox?.addEventListener('pointerdown',(event)=>{ if(event.target===previewDeleteHandle)return; beginTransformGesture(event.target?.dataset?.transform||'move',event); });
++  previewTransformBox?.addEventListener('pointermove',updateTransformGesture); previewTransformBox?.addEventListener('pointerup',finishTransformGesture); previewTransformBox?.addEventListener('pointercancel',finishTransformGesture);
++  previewDeleteHandle?.addEventListener('click',(event)=>{event.stopPropagation();$('deleteClipBtn')?.click();});
++
++  function wireWorkspaceResizer(handle,side){ handle?.addEventListener('pointerdown',(event)=>{ if(!workspace||window.innerWidth<1251)return; const rect=workspace.getBoundingClientRect(); handle.classList.add('dragging'); handle.setPointerCapture?.(event.pointerId); const move=(e)=>{const raw=side==='left'?e.clientX-rect.left:rect.right-e.clientX; const width=Core.clamp(raw,side==='left'?150:220,side==='left'?420:560); document.documentElement.style.setProperty(side==='left'?'--media-panel-w':'--inspector-panel-w',`${Math.round(width)}px`);}; const done=()=>{handle.classList.remove('dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',done);handle.removeEventListener('pointercancel',done);try{localStorage.setItem('cre8torcut.workspace.mediaW',getComputedStyle(document.documentElement).getPropertyValue('--media-panel-w'));localStorage.setItem('cre8torcut.workspace.inspectorW',getComputedStyle(document.documentElement).getPropertyValue('--inspector-panel-w'));}catch(_){}}; handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',done);handle.addEventListener('pointercancel',done);event.preventDefault();}); }
++  wireWorkspaceResizer(mediaResizeHandle,'left'); wireWorkspaceResizer(inspectorResizeHandle,'right');
++
++  timelineResizeGrip?.addEventListener('pointerdown',(event)=>{ const panel=document.querySelector('.timeline-panel'); if(!panel||window.innerWidth>680||!matchMedia('(orientation: portrait)').matches)return; const startY=event.clientY,startH=panel.getBoundingClientRect().height; timelineResizeGrip.setPointerCapture?.(event.pointerId); const move=(e)=>{const height=Core.clamp(startH+(startY-e.clientY),92,window.innerHeight*.58);document.documentElement.style.setProperty('--timeline-h',`${Math.round(height)}px`);updatePreviewTransformOverlay();}; const done=()=>{timelineResizeGrip.removeEventListener('pointermove',move);timelineResizeGrip.removeEventListener('pointerup',done);timelineResizeGrip.removeEventListener('pointercancel',done);try{localStorage.setItem('cre8torcut.workspace.timelineH',getComputedStyle(document.documentElement).getPropertyValue('--timeline-h'));}catch(_){}}; timelineResizeGrip.addEventListener('pointermove',move);timelineResizeGrip.addEventListener('pointerup',done);timelineResizeGrip.addEventListener('pointercancel',done);event.preventDefault(); });
++  focusPreviewBtn?.addEventListener('click',()=>{document.body.classList.toggle('preview-focus-mode');setTimeout(()=>{updatePreviewTransformOverlay();drawFrame();},0);});
++  replayDataInput?.addEventListener('change',async()=>{const file=replayDataInput.files?.[0];if(!file)return;try{const payload=JSON.parse(await file.text());const result=loadReplayBridgePayload(payload);autosaveStatus.textContent=`Replay data: ${result.events} events loaded`;}catch(err){console.error(err);autosaveStatus.textContent=`Replay data error: ${err.message}`;}finally{replayDataInput.value='';}});
++
+   pickKeyColorBtn?.addEventListener('click', () => {
+     const clip = getSelectedClip();
+     if (!clip) return;
+@@ -3404,6 +3614,11 @@
+     }
+   });
+ 
++  window.Cre8torCutReplayBridge = Object.freeze({ contract:'cre8torcut-replay-v1', version:1, load:(payload)=>loadReplayBridgePayload(payload), clear:()=>{replayBridgePayload=null;renderTimeline();}, example:()=>({contract:'cre8torcut-replay-v1',source:'game',duration:12,events:[{time:3.2,type:'impact',label:'Impact',entityId:'player-1',data:{speed:84}}]}) });
++  window.addEventListener('cre8torcut:replay-data',(event)=>{try{loadReplayBridgePayload(event.detail);}catch(err){console.error('Replay bridge rejected payload',err);}});
++  window.addEventListener('resize',updatePreviewTransformOverlay); document.addEventListener('fullscreenchange',updatePreviewTransformOverlay);
++  try { const mediaW=localStorage.getItem('cre8torcut.workspace.mediaW'), inspectorW=localStorage.getItem('cre8torcut.workspace.inspectorW'), timelineH=localStorage.getItem('cre8torcut.workspace.timelineH'); if(mediaW)document.documentElement.style.setProperty('--media-panel-w',mediaW); if(inspectorW)document.documentElement.style.setProperty('--inspector-panel-w',inspectorW); if(timelineH)document.documentElement.style.setProperty('--timeline-h',timelineH); } catch(_) {}
++
+   window.addEventListener('beforeunload', () => {
+     runtimeAssets.forEach((runtime) => URL.revokeObjectURL(runtime.url));
+   });
