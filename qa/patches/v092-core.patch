@@ -1,18 +1,9 @@
 --- a/android-build/app/src/main/assets/editor-core.js
 +++ b/android-build/app/src/main/assets/editor-core.js
-@@ -51,7 +51,7 @@
-   }
- 
-   function defaultLayer() {
+@@ -54 +54 @@
 -    return { opacity: 100, scale: 100, x: 50, y: 50, blendMode: 'normal' };
 +    return { opacity: 100, scale: 100, x: 50, y: 50, cropX: 0, cropY: 0, cropWidth: 100, cropHeight: 100, blendMode: 'normal' };
-   }
- 
-   function createVideoTrack(spec) {
-@@ -188,13 +188,20 @@
-         animationIntensity: clamp(Number(clip.overlay?.animationIntensity) || 100, 0, 200),
-         shadow: clip.overlay?.shadow !== false
-       },
+@@ -191,7 +191,14 @@
 -      layer: {
 -        opacity: clamp(Number(clip.layer?.opacity ?? 100), 0, 100),
 -        scale: clamp(Number(clip.layer?.scale ?? 100), 10, 300),
@@ -34,5 +25,3 @@
 +          blendMode: blendModes.includes(blendMode) ? blendMode : 'normal'
 +        };
 +      })()
-     };
-   }
