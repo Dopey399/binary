@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="${1:-.}"
 cd "$ROOT"
 for patch in qa/patches/v092-index.patch qa/patches/v092-styles.patch qa/patches/v092-core.patch qa/patches/v092-app.patch; do
-  git apply "$patch"
+  git apply --unidiff-zero "$patch"
 done
 cat > /tmp/cre8torcut-v092.sha256 <<'SUMS'
 2a397298259f946698f96e5bce2706743299c664aa323104af94a8059924325c  android-build/app/src/main/assets/index.html
