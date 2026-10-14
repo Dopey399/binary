@@ -147,6 +147,6 @@ jobs:
           7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  /tmp/apk-assets/assets/index.html
           8e9a43f5120ef2bb69314c7d17804a778e4cc8015ca4031ad06ab47bbec4559e  /tmp/apk-assets/assets/styles.css
           72ecb368da5b4207b54538470938d70f30414ffbe227775eaf63d21f426b0d86  /tmp/apk-assets/assets/editor-core.js
-          b7e180cd11f2582a8e000d814115f3eafa7f1eb17e67cb6af91a9186856bcbf8  /tmp/apk-assets/assets/app.js
+          7f7de7128b1b34e61858c6dd79e0bcbafe1558db112b2ff9a0389857115d550a  /tmp/apk-assets/assets/app.js
           SUMS
           sha256sum -c /tmp/assets.sha256
