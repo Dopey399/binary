@@ -53,40 +53,73 @@ test('mobile split/delete shortcuts drive the same editor actions', async ({ pag
   assertClean(errors);
 });
 
-test('mobile preview move stays separate from resize and clip-area drag scrubs timeline', async ({ page }) => {
+test('mobile crop box edits framing independently, whole-image mode stays separate, and timeline drag scrubs', async ({ page }) => {
   const errors = await openApp(page, { width: 390, height: 844 });
   await importSvg(page, 'touch-qa.svg', svg.blue);
 
   const transformBox = page.locator('#previewTransformBox');
   const moveHandle = page.locator('.preview-move-handle');
+  const modeHandle = page.locator('#previewModeHandle');
   await expect(transformBox).toBeVisible();
-  await expect(moveHandle).toBeVisible();
+  await expect(transformBox).toHaveClass(/crop-mode/);
+  await expect(modeHandle).toHaveText('Whole');
+
+  let project = await saveProject(page);
+  const initialLayer = project.tracks[0].clips[0].layer;
+  expect(initialLayer.cropWidth).toBe(100);
+  expect(initialLayer.cropHeight).toBe(100);
+  const initialScale = initialLayer.scale;
+  const initialX = initialLayer.x;
+  const initialY = initialLayer.y;
+
+  const beforeCrop = await transformBox.boundingBox();
+  const resize = page.locator('.preview-transform-handle.se');
+  const resizeBox = await resize.boundingBox();
+  expect(beforeCrop).toBeTruthy();
+  expect(resizeBox).toBeTruthy();
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2 - 42, resizeBox.y + resizeBox.height / 2 - 34, { steps: 5 });
+  await page.mouse.up();
+
+  const afterCrop = await transformBox.boundingBox();
+  expect(afterCrop.width).toBeLessThan(beforeCrop.width - 8);
+  expect(afterCrop.height).toBeLessThan(beforeCrop.height - 8);
+  project = await saveProject(page);
+  let layer = project.tracks[0].clips[0].layer;
+  expect(layer.cropWidth).toBeLessThan(100);
+  expect(layer.cropHeight).toBeLessThan(100);
+  expect(layer.scale).toBe(initialScale);
+  expect(layer.x).toBe(initialX);
+  expect(layer.y).toBe(initialY);
 
   const beforeMove = await transformBox.boundingBox();
   const moveBox = await moveHandle.boundingBox();
-  expect(beforeMove).toBeTruthy();
   expect(moveBox).toBeTruthy();
   await page.mouse.move(moveBox.x + moveBox.width / 2, moveBox.y + moveBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(moveBox.x + moveBox.width / 2 + 28, moveBox.y + moveBox.height / 2 + 14, { steps: 4 });
+  await page.mouse.move(moveBox.x + moveBox.width / 2 + 22, moveBox.y + moveBox.height / 2 + 12, { steps: 4 });
   await page.mouse.up();
-
   const afterMove = await transformBox.boundingBox();
-  expect(afterMove.x - beforeMove.x).toBeGreaterThan(12);
-  expect(afterMove.y - beforeMove.y).toBeGreaterThan(5);
-  expect(Math.abs(afterMove.width - beforeMove.width)).toBeLessThan(4);
-  expect(Math.abs(afterMove.height - beforeMove.height)).toBeLessThan(4);
+  expect(afterMove.x - beforeMove.x).toBeGreaterThan(5);
+  project = await saveProject(page);
+  layer = project.tracks[0].clips[0].layer;
+  expect(layer.cropX + layer.cropY).toBeGreaterThan(0);
+  expect(layer.scale).toBe(initialScale);
+  expect(layer.x).toBe(initialX);
+  expect(layer.y).toBe(initialY);
 
-  const resize = page.locator('.preview-transform-handle.se');
-  const resizeBox = await resize.boundingBox();
-  expect(resizeBox).toBeTruthy();
-  const widthBeforeResize = afterMove.width;
-  await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2);
+  await modeHandle.click();
+  await expect(transformBox).toHaveClass(/layer-mode/);
+  await expect(modeHandle).toHaveText('Crop');
+  const wholeMove = await moveHandle.boundingBox();
+  await page.mouse.move(wholeMove.x + wholeMove.width / 2, wholeMove.y + wholeMove.height / 2);
   await page.mouse.down();
-  await page.mouse.move(resizeBox.x + resizeBox.width / 2 - 32, resizeBox.y + resizeBox.height / 2 - 24, { steps: 4 });
+  await page.mouse.move(wholeMove.x + wholeMove.width / 2 + 18, wholeMove.y + wholeMove.height / 2, { steps: 4 });
   await page.mouse.up();
-  const afterResize = await transformBox.boundingBox();
-  expect(afterResize.width).toBeLessThan(widthBeforeResize - 8);
+  project = await saveProject(page);
+  layer = project.tracks[0].clips[0].layer;
+  expect(layer.x).toBeGreaterThan(initialX);
 
   const touchAction = await page.locator('#timeline').evaluate((el) => getComputedStyle(el).touchAction);
   expect(touchAction).toBe('none');
