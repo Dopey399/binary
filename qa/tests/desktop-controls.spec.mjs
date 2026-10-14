@@ -68,7 +68,10 @@ test('transport, clip navigation, reorder, split and delete remain functional', 
   await expect(page.locator('#moveRightBtn')).toBeEnabled();
   await page.locator('#moveRightBtn').click();
 
-  await selectTimelineClip(page, 'one.svg');
+  // Select through transport. v0.9.1 intentionally lets a timeline clip tap select
+  // without also moving the playhead, so split positioning is tested separately.
+  await page.locator('#previousClipBtn').click();
+  await expect(page.locator('#selectedClipLabel')).toContainText('one.svg');
   await setValue(page, '#scrubber', 2.0);
   await page.locator('#splitBtn').click();
   let project = await saveProject(page);
