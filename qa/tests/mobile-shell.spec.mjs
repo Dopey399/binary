@@ -83,10 +83,10 @@ test('mobile preview move stays separate from resize and clip-area drag scrubs t
   const widthBeforeResize = afterMove.width;
   await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(resizeBox.x + resizeBox.width / 2 + 24, resizeBox.y + resizeBox.height / 2 + 18, { steps: 4 });
+  await page.mouse.move(resizeBox.x + resizeBox.width / 2 - 32, resizeBox.y + resizeBox.height / 2 - 24, { steps: 4 });
   await page.mouse.up();
   const afterResize = await transformBox.boundingBox();
-  expect(afterResize.width).toBeGreaterThan(widthBeforeResize + 8);
+  expect(afterResize.width).toBeLessThan(widthBeforeResize - 8);
 
   const touchAction = await page.locator('#timeline').evaluate((el) => getComputedStyle(el).touchAction);
   expect(touchAction).toBe('none');
@@ -95,6 +95,8 @@ test('mobile preview move stays separate from resize and clip-area drag scrubs t
   const clipBox = await clip.boundingBox();
   expect(clipBox).toBeTruthy();
   const scrubBefore = Number(await page.locator('#scrubber').inputValue());
+  await clip.click({ position: { x: 12, y: clipBox.height / 2 } });
+  expect(Number(await page.locator('#scrubber').inputValue())).toBeCloseTo(scrubBefore, 3);
   const scrollBefore = await page.locator('#timeline').evaluate((el) => el.scrollLeft);
   await page.mouse.move(clipBox.x + 12, clipBox.y + clipBox.height / 2);
   await page.mouse.down();
