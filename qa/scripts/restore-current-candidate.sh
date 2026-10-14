@@ -32,4 +32,5 @@ SUMS
 sha256sum -c "$TMP/assets.sha256"
 node --check "$ROOT/android-build/app/src/main/assets/editor-core.js"
 node --check "$ROOT/android-build/app/src/main/assets/app.js"
-echo "current candidate restored from artifact $ARTIFACT_ID: PASS"
+echo "v0.8.0 base candidate restored from artifact $ARTIFACT_ID: PASS"
+bash "$ROOT/qa/scripts/apply-v090.sh" "$ROOT"
