@@ -16,8 +16,8 @@ grep -q 'setJavaScriptEnabled(true)' "$HOST"
 grep -q 'setDomStorageEnabled(true)' "$HOST"
 grep -q 'file:///android_asset/index.html' "$HOST"
 grep -q "applicationId 'com.cre8torcut.mobile'" "$GRADLE"
-grep -q 'versionCode 20' "$GRADLE"
-grep -q "versionName '0.9.1'" "$GRADLE"
+grep -q 'versionCode 21' "$GRADLE"
+grep -q "versionName '0.9.2'" "$GRADLE"
 grep -q 'android.permission.INTERNET' "$MANIFEST" || true
 
 echo 'android-host-bot: PASS'
