@@ -1,0 +1,8 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -3430 +3430 @@
+-      layer: { opacity: 100, scale: 100, x: 50, y: 50, blendMode: 'normal' },
++      layer: { opacity: 100, scale: 100, x: 50, y: 50, cropX: 0, cropY: 0, cropWidth: 100, cropHeight: 100, blendMode: 'normal' },
+@@ -3616,0 +3617,2 @@
++    updatePreviewTransformOverlay();
++    drawFrame();
