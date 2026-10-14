@@ -1,9 +1,6 @@
 --- a/android-build/app/src/main/assets/styles.css
 +++ b/android-build/app/src/main/assets/styles.css
-@@ -1192,3 +1192,27 @@
-   .preview-transform-handle.sw { left:-8px; bottom:-8px; }
-   .preview-transform-handle.se { right:-8px; bottom:-8px; }
- }
+@@ -1194,0 +1195,24 @@
 +
 +
 +/* v0.9.2 crop-first direct-touch editing */
