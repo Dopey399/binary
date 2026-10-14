@@ -1,0 +1,28 @@
+--- a/android-build/app/src/main/assets/editor-core.js
++++ b/android-build/app/src/main/assets/editor-core.js
+@@ -144,8 +144,7 @@
+       if (sourceStart >= duration - 0.01) sourceStart = Math.max(0, duration - 0.01);
+       sourceEnd = Math.min(duration, sourceStart + 0.01);
+     }
+-    const rotationValues = [0, 90, 180, 270];
+-    const rotation = Number(clip.effects?.rotation);
++    const rotation = clamp(Number(clip.effects?.rotation) || 0, -180, 180);
+     const blendModes = ['normal', 'screen', 'multiply', 'overlay', 'lighten'];
+     const blendMode = String(clip.layer?.blendMode || 'normal');
+     return {
+@@ -155,13 +154,13 @@
+       sourceStart,
+       sourceEnd,
+       timelineStart: Math.max(0, Number(clip.timelineStart) || 0),
+-      speed: clamp(Number(clip.speed) || 1, 0.25, 4),
++      speed: clamp(Number(clip.speed) || 1, 0.1, 8),
+       volume: clamp(Number(clip.volume) || 0, 0, 2),
+       effects: {
+         brightness: clamp(Number(clip.effects?.brightness ?? 100), 0, 200),
+         contrast: clamp(Number(clip.effects?.contrast ?? 100), 0, 200),
+         saturation: clamp(Number(clip.effects?.saturation ?? 100), 0, 200),
+-        rotation: rotationValues.includes(rotation) ? rotation : 0,
++        rotation,
+         preset: String(clip.effects?.preset || 'none'),
+         intensity: clamp(Number(clip.effects?.intensity ?? 100), 0, 200),
+         speed: clamp(Number(clip.effects?.speed ?? 100), 25, 300),
