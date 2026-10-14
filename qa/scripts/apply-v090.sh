@@ -2,15 +2,25 @@
 set -euo pipefail
 ROOT="${1:-.}"
 cd "$ROOT"
-for patch in \
-  qa/patches/v090-index.patch \
-  qa/patches/v090-styles.patch \
-  qa/patches/v090-core.patch \
-  qa/patches/v090-app-1.patch \
-  qa/patches/v090-app-2.patch \
-  qa/patches/v090-app-3.patch \
-  qa/patches/v090-app-4.patch; do
-  git apply "$patch"
+PATCHES=(
+  qa/patches/v090-index.patch
+  qa/patches/v090-styles.patch
+  qa/patches/v090-core.patch
+  qa/patches/v090-app-1.patch
+  qa/patches/v090-app-2.patch
+  qa/patches/v090-app-3.patch
+  qa/patches/v090-app-4.patch
+)
+for patch in "${PATCHES[@]}"; do
+  tmp="$(mktemp)"
+  python3 - "$patch" "$tmp" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text()
+Path(sys.argv[2]).write_text(text.rstrip('\n') + '\n')
+PY
+  git apply "$tmp"
+  rm -f "$tmp"
 done
 cat > /tmp/cre8torcut-v090.sha256 <<'SUMS'
 7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  android-build/app/src/main/assets/index.html
