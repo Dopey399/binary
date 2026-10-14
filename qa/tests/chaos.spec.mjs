@@ -34,7 +34,7 @@ test('deterministic randomized editor actions do not corrupt state or throw', as
     } else {
       const selector = safeButtons[Math.floor(random() * safeButtons.length)];
       const locator = page.locator(selector);
-      if (await locator.isEnabled()) await locator.click();
+      if (await locator.isVisible() && await locator.isEnabled()) await locator.click();
     }
     if (i % 10 === 0) await page.waitForTimeout(20);
   }
