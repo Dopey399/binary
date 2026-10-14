@@ -1,0 +1,115 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -992,6 +1012,112 @@
+     updateTransportUI();
+     setEditButtons();
+     emptyState.style.display = Core.allClipPlacements(project).length ? 'none' : 'grid';
++    updatePreviewTransformOverlay();
++  }
++
++  function normalizedReplayPayload(payload) {
++    if (!payload || typeof payload !== 'object') throw new Error('Replay data must be a JSON object.');
++    const contract = String(payload.contract || payload.schema || 'cre8torcut-replay-v1');
++    if (contract !== 'cre8torcut-replay-v1') throw new Error(`Unsupported replay contract: ${contract}`);
++    const events = Array.isArray(payload.events) ? payload.events.map((event, index) => ({
++      time: Math.max(0, Number(event.time ?? event.t ?? 0) || 0),
++      type: String(event.type || event.kind || 'event'),
++      label: String(event.label || event.name || event.type || `Event ${index + 1}`),
++      entityId: event.entityId == null ? null : String(event.entityId),
++      data: event.data && typeof event.data === 'object' ? event.data : {}
++    })).sort((a, b) => a.time - b.time) : [];
++    return { contract, source: String(payload.source || 'external'), duration: Math.max(0, Number(payload.duration) || 0), events, cameras: payload.cameras || null, telemetry: payload.telemetry || null };
++  }
++
++  function renderReplayMarkers() {
++    if (!replayMarkers) return;
++    replayMarkers.replaceChildren();
++    if (!replayBridgePayload) return;
++    const total = Math.max(Core.projectDuration(project), replayBridgePayload.duration || 0);
++    replayBridgePayload.events.forEach((event) => {
++      if (event.time > total + .001) return;
++      const marker = document.createElement('button');
++      marker.type = 'button';
++      marker.className = 'replay-marker';
++      marker.dataset.kind = event.type.toLowerCase();
++      marker.style.left = `${timelineTrackRailWidth() + event.time * timelinePixelsPerSecond()}px`;
++      marker.title = `${event.label} · ${fmt(event.time)}`;
++      marker.setAttribute('aria-label', marker.title);
++      marker.addEventListener('click', (clickEvent) => {
++        clickEvent.stopPropagation();
++        pausePlayback();
++        seekProject(event.time).catch(console.error);
++      });
++      replayMarkers.appendChild(marker);
++    });
++  }
++
++  function loadReplayBridgePayload(payload) {
++    replayBridgePayload = normalizedReplayPayload(payload);
++    renderTimeline();
++    return { contract: replayBridgePayload.contract, events: replayBridgePayload.events.length, duration: replayBridgePayload.duration };
++  }
++
++  function selectedClipCanvasBox() {
++    const clip = getSelectedClip();
++    if (!clip || !previewTransformBox || !canvas || !dropZone) return null;
++    const asset = Core.getAsset(project, clip.assetId);
++    if (!asset) return null;
++    const zone = dropZone.getBoundingClientRect();
++    if (!zone.width || !zone.height || !canvas.width || !canvas.height) return null;
++    const canvasAspect = canvas.width / canvas.height;
++    const zoneAspect = zone.width / zone.height;
++    let contentW, contentH, offsetX, offsetY;
++    if (zoneAspect > canvasAspect) { contentH = zone.height; contentW = contentH * canvasAspect; offsetX = (zone.width - contentW) / 2; offsetY = 0; }
++    else { contentW = zone.width; contentH = contentW / canvasAspect; offsetX = 0; offsetY = (zone.height - contentH) / 2; }
++    const sourceW = Math.max(1, Number(asset.width) || canvas.width);
++    const sourceH = Math.max(1, Number(asset.height) || canvas.height);
++    const rot = Number(clip.effects?.rotation || 0);
++    const quarterTurn = Math.abs(Math.round(rot / 90)) % 2 === 1 && Math.abs(rot % 90) < .001;
++    const rw = quarterTurn ? sourceH : sourceW;
++    const rh = quarterTurn ? sourceW : sourceH;
++    const fit = Math.min(canvas.width / rw, canvas.height / rh);
++    const layerScaleValue = Core.clamp(Number(clip.layer?.scale ?? 100), 10, 300) / 100;
++    const width = Math.max(18, rw * fit * layerScaleValue * (contentW / canvas.width));
++    const height = Math.max(18, rh * fit * layerScaleValue * (contentH / canvas.height));
++    const cx = offsetX + contentW / 2 + ((Core.clamp(Number(clip.layer?.x ?? 50), 0, 100) - 50) / 100) * contentW;
++    const cy = offsetY + contentH / 2 + ((Core.clamp(Number(clip.layer?.y ?? 50), 0, 100) - 50) / 100) * contentH;
++    return { clip, contentW, contentH, offsetX, offsetY, cx, cy, width, height, rotation: rot };
++  }
++
++  function updatePreviewTransformOverlay() {
++    if (!previewTransformBox) return;
++    const box = selectedClipCanvasBox();
++    if (!box || exportInProgress || keyPickMode || fxPickMode || document.fullscreenElement === dropZone) { previewTransformBox.hidden = true; return; }
++    previewTransformBox.hidden = false;
++    previewTransformBox.style.left = `${box.cx - box.width / 2}px`;
++    previewTransformBox.style.top = `${box.cy - box.height / 2}px`;
++    previewTransformBox.style.width = `${box.width}px`;
++    previewTransformBox.style.height = `${box.height}px`;
++    previewTransformBox.style.transform = `rotate(${box.rotation}deg)`;
++  }
++
++  function beginTransformGesture(kind, event) {
++    const box = selectedClipCanvasBox(); if (!box || exportInProgress) return;
++    pausePlayback(); transformGestureBaseProject = Core.clone(project);
++    const rect = dropZone.getBoundingClientRect();
++    transformGesture = { kind, pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, box, baseScale:Number(box.clip.layer?.scale ?? 100), baseX:Number(box.clip.layer?.x ?? 50), baseY:Number(box.clip.layer?.y ?? 50), baseRotation:Number(box.clip.effects?.rotation ?? 0), centerClientX:rect.left+box.cx, centerClientY:rect.top+box.cy, startDistance:Math.max(12,Math.hypot(event.clientX-(rect.left+box.cx),event.clientY-(rect.top+box.cy))), startAngle:Math.atan2(event.clientY-(rect.top+box.cy),event.clientX-(rect.left+box.cx)) };
++    previewTransformBox?.setPointerCapture?.(event.pointerId); event.preventDefault();
++  }
++
++  function updateTransformGesture(event) {
++    const g=transformGesture; if (!g || g.pointerId!==event.pointerId) return; const clip=getSelectedClip(); if(!clip) return;
++    let layerPatch={}, effectsPatch={};
++    if(g.kind==='move'){ const dx=event.clientX-g.startX,dy=event.clientY-g.startY; layerPatch.x=Core.clamp(g.baseX+(dx/Math.max(1,g.box.contentW))*100,0,100); layerPatch.y=Core.clamp(g.baseY+(dy/Math.max(1,g.box.contentH))*100,0,100); }
++    else if(g.kind==='scale'){ const distance=Math.max(6,Math.hypot(event.clientX-g.centerClientX,event.clientY-g.centerClientY)); layerPatch.scale=Core.clamp(g.baseScale*(distance/g.startDistance),10,300); }
++    else if(g.kind==='rotate'){ const angle=Math.atan2(event.clientY-g.centerClientY,event.clientX-g.centerClientX); let deg=g.baseRotation+(angle-g.startAngle)*180/Math.PI; while(deg>180)deg-=360; while(deg<-180)deg+=360; effectsPatch.rotation=Math.round(deg); }
++    const next=Core.updateClip(project,clip.id,{layer:layerPatch,effects:effectsPatch}); setProject(next,{record:false,autosave:false}); drawFrame(); event.preventDefault();
++  }
++
++  function finishTransformGesture(event) {
++    if(!transformGesture || (event && transformGesture.pointerId!==event.pointerId)) return; const finalProject=Core.clone(project);
++    if(transformGestureBaseProject){ history.present=Core.clone(transformGestureBaseProject); project=history.replace(finalProject,true); transformGestureBaseProject=null; saveAutosave(); renderAll(); }
++    transformGesture=null;
+   }
+ 
+   function safeCssUrl(value) {
