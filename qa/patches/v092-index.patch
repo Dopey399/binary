@@ -1,0 +1,39 @@
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -11,7 +11,7 @@
+   <div class="app-shell">
+     <header class="topbar">
+       <div>
+-        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.9.1</span></div>
++        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.9.2</span></div>
+         <div class="subtitle">Direct-touch editing + Toon FX + replay-ready 3-layer editor — media stays on your device</div>
+       </div>
+       <div class="top-actions">
+@@ -73,12 +73,13 @@
+         <div id="dropZone" class="drop-zone">
+           <canvas id="previewCanvas" width="1280" height="720" aria-label="Video preview"></canvas>
+           <div id="previewTransformBox" class="preview-transform-box" hidden aria-label="Selected layer transform controls">
+-            <button class="preview-transform-handle corner nw" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+-            <button class="preview-transform-handle corner ne" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+-            <button class="preview-transform-handle corner sw" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+-            <button class="preview-transform-handle corner se" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+-            <button class="preview-move-handle" type="button" data-transform="move" aria-label="Move selected layer">✥</button>
+-            <button id="previewRotateHandle" class="preview-rotate-handle" type="button" data-transform="rotate" aria-label="Rotate selected layer">↻</button>
++            <button class="preview-transform-handle corner nw" type="button" data-transform="scale" data-corner="nw" aria-label="Resize selected layer"></button>
++            <button class="preview-transform-handle corner ne" type="button" data-transform="scale" data-corner="ne" aria-label="Resize selected layer"></button>
++            <button class="preview-transform-handle corner sw" type="button" data-transform="scale" data-corner="sw" aria-label="Resize selected layer"></button>
++            <button class="preview-transform-handle corner se" type="button" data-transform="scale" data-corner="se" aria-label="Resize selected layer"></button>
++            <button class="preview-move-handle" type="button" data-transform="move" aria-label="Move crop selection">✥</button>
++            <button id="previewModeHandle" class="preview-mode-handle" type="button" aria-label="Switch between crop and whole image editing">Whole</button>
++            <button id="previewRotateHandle" class="preview-rotate-handle" type="button" data-transform="rotate" aria-label="Rotate whole image">↻</button>
+             <button id="previewDeleteHandle" class="preview-delete-handle" type="button" aria-label="Delete selected clip">⌫</button>
+           </div>
+           <div id="emptyState" class="empty-state">
+@@ -360,7 +361,7 @@
+     </nav>
+ 
+     <footer class="footer-note">
+-      v0.9.1 repairs mobile direct-touch move/resize separation and timeline scrubbing while retaining v0.9.0 direct-touch preview transforms, PowerDirector-style scrubbing/zoom, Toon FX, resizable workspace panels, neon separators, and a generic replay-data bridge on top of image imports plus non-destructive image/video background transparency controls on top of Creator Mode, hover-wheel precision, and the existing three-layer timeline while retaining the visual FX and sphere-target racing system: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
++      v0.9.2 separates crop framing from whole-image transforms while retaining the v0.9.1 touch/timeline repairs and v0.9.0 direct-touch preview transforms, PowerDirector-style scrubbing/zoom, Toon FX, resizable workspace panels, neon separators, and a generic replay-data bridge on top of image imports plus non-destructive image/video background transparency controls on top of Creator Mode, hover-wheel precision, and the existing three-layer timeline while retaining the visual FX and sphere-target racing system: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
+     </footer>
+   </div>
