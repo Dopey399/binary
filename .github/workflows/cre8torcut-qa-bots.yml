@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore v0.8.0 base and apply exact v0.9.0 source patch
+      - name: Restore v0.8.0 base and apply exact v0.9.1 source patches
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: bash qa/scripts/restore-current-candidate.sh .
@@ -126,7 +126,7 @@ jobs:
         with:
           name: qa-built-apk-${{ github.run_id }}
           path: /tmp/qa-apk
-      - name: Verify package, signature, and embedded v0.9.0 source
+      - name: Verify package, signature, and embedded v0.9.1 source
         shell: bash
         run: |
           set -euo pipefail
@@ -144,9 +144,9 @@ jobs:
           rm -rf /tmp/apk-assets && mkdir -p /tmp/apk-assets
           unzip -qq "$APK" 'assets/*' -d /tmp/apk-assets
           cat > /tmp/assets.sha256 <<'SUMS'
-          7da6aec3956fdbf7da008cc60c72a71c9b2a519da94361ff789eb624fc92aff0  /tmp/apk-assets/assets/index.html
-          8e9a43f5120ef2bb69314c7d17804a778e4cc8015ca4031ad06ab47bbec4559e  /tmp/apk-assets/assets/styles.css
+          27771340fc766ee88d445d183b90cba18ae08d48b6696f27529253605f2f5c69  /tmp/apk-assets/assets/index.html
+          88966ad6a6376215100b3eceb5831f7e378ef7c422bd61e83c30f07185858118  /tmp/apk-assets/assets/styles.css
           72ecb368da5b4207b54538470938d70f30414ffbe227775eaf63d21f426b0d86  /tmp/apk-assets/assets/editor-core.js
-          dba7bce86f9fdcf94a65441319520131ff5de512bec49c8216c8a3163a1a4deb  /tmp/apk-assets/assets/app.js
+          101e4c9f5278a473fccd4bcd2e29c1b837730a8a280bb9f90b7f553bea557aef  /tmp/apk-assets/assets/app.js
           SUMS
           sha256sum -c /tmp/assets.sha256

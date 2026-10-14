@@ -1,0 +1,58 @@
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -11,7 +11,7 @@
+   <div class="app-shell">
+     <header class="topbar">
+       <div>
+-        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.9.0</span></div>
++        <div class="brand"><span class="brand-mark" aria-hidden="true">C</span><span class="brand-name">Cre8torCut</span> <span class="version">v0.9.1</span></div>
+         <div class="subtitle">Direct-touch editing + Toon FX + replay-ready 3-layer editor — media stays on your device</div>
+       </div>
+       <div class="top-actions">
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -77,6 +77,7 @@
+             <button class="preview-transform-handle corner ne" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+             <button class="preview-transform-handle corner sw" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
+             <button class="preview-transform-handle corner se" type="button" data-transform="scale" aria-label="Resize selected layer"></button>
++            <button class="preview-move-handle" type="button" data-transform="move" aria-label="Move selected layer">✥</button>
+             <button id="previewRotateHandle" class="preview-rotate-handle" type="button" data-transform="rotate" aria-label="Rotate selected layer">↻</button>
+             <button id="previewDeleteHandle" class="preview-delete-handle" type="button" aria-label="Delete selected clip">⌫</button>
+           </div>
+--- a/android-build/app/src/main/assets/index.html
++++ b/android-build/app/src/main/assets/index.html
+@@ -359,7 +360,7 @@
+     </nav>
+ 
+     <footer class="footer-note">
+-      v0.9.0 adds direct-touch preview transforms, PowerDirector-style scrubbing/zoom, Toon FX, resizable workspace panels, neon separators, and a generic replay-data bridge on top of image imports plus non-destructive image/video background transparency controls on top of Creator Mode, hover-wheel precision, and the existing three-layer timeline while retaining the visual FX and sphere-target racing system: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
++      v0.9.1 repairs mobile direct-touch move/resize separation and timeline scrubbing while retaining v0.9.0 direct-touch preview transforms, PowerDirector-style scrubbing/zoom, Toon FX, resizable workspace panels, neon separators, and a generic replay-data bridge on top of image imports plus non-destructive image/video background transparency controls on top of Creator Mode, hover-wheel precision, and the existing three-layer timeline while retaining the visual FX and sphere-target racing system: compact command bar, thumbnail media, zoomable precision timeline, contextual editing dock, and refined portrait sheets while preserving Studio landscape, 50 text styles, 24 animated-text presets, deterministic project edits, undo/redo, project JSON save/load, sequential playback, and WebM export. MP4/H.264 is not implemented yet.
+     </footer>
+   </div>
+ 
+--- a/android-build/app/src/main/assets/styles.css
++++ b/android-build/app/src/main/assets/styles.css
+@@ -1172,3 +1172,23 @@
+ .control-group { position:relative; border-top-color:transparent; }.control-group::before { content:""; position:absolute; left:0; right:0; top:-1px; height:1px; pointer-events:none; background:linear-gradient(90deg,transparent 0%,rgba(255,63,164,.78) 16%,rgba(49,215,255,.82) 50%,rgba(85,255,154,.72) 84%,transparent 100%); box-shadow:0 0 7px rgba(49,215,255,.28); opacity:.65; }.control-group:nth-of-type(3n+1)::before { background:linear-gradient(90deg,transparent,rgba(255,63,164,.88),rgba(49,215,255,.5),transparent); }.control-group:nth-of-type(3n+2)::before { background:linear-gradient(90deg,transparent,rgba(85,255,154,.82),rgba(49,215,255,.62),transparent); }.timeline-panel { border-top-color:rgba(49,215,255,.45) !important; box-shadow:0 -2px 10px rgba(255,63,164,.09),0 -1px 12px rgba(49,215,255,.1); }.transport { border-top-color:rgba(85,255,154,.22) !important; }
+ body.preview-focus-mode .media-panel,body.preview-focus-mode .inspector,body.preview-focus-mode .timeline-panel,body.preview-focus-mode .mobile-dock,body.preview-focus-mode .project-strip { display:none !important; } body.preview-focus-mode .workspace { grid-template-columns:minmax(0,1fr) !important; } body.preview-focus-mode .viewer-panel { grid-column:1/-1; } body.preview-focus-mode .workspace-resize-handle { display:none !important; } body.preview-focus-mode .preview-focus-command { color:var(--neon-green); text-shadow:0 0 8px rgba(85,255,154,.8); }
+ @media (orientation:portrait) and (max-width:680px) { .app-shell { grid-template-rows:50px minmax(0,1fr) var(--timeline-h) 68px; }.timeline-panel { height:var(--timeline-h); }.timeline-resize-grip { display:block; }.transport { grid-template-columns:42px 58px minmax(0,1fr) 58px 34px 34px !important; }.preview-focus-command { display:inline-grid !important; }.preview-transform-handle { width:16px; height:16px; }.preview-delete-handle { width:30px; height:30px; right:-36px; }.preview-rotate-handle { width:30px; height:30px; bottom:-40px; } body.preview-focus-mode .app-shell { grid-template-rows:50px minmax(0,1fr); grid-template-areas:"topbar" "viewer"; } body.preview-focus-mode .viewer-panel { grid-area:viewer; } }
++
++/* v0.9.1 device-QA touch corrections */
++.preview-transform-box { background:rgba(49,215,255,.012); }
++.preview-move-handle {
++  position:absolute; left:50%; top:50%; width:38px; height:38px; padding:0; transform:translate(-50%,-50%);
++  display:grid; place-items:center; border:1px solid rgba(255,255,255,.86); border-radius:50%;
++  background:rgba(5,14,23,.72); color:#e8f8ff; font-size:20px; line-height:1; font-weight:900; cursor:move;
++  touch-action:none; box-shadow:0 0 0 1px rgba(49,215,255,.34),0 0 14px rgba(49,215,255,.24);
++  opacity:.78;
++}
++.preview-move-handle:active { opacity:1; background:rgba(10,34,50,.94); }
++@media (orientation:portrait) and (max-width:680px) {
++  .timeline { touch-action:none !important; overscroll-behavior-x:none; }
++  .preview-move-handle { width:42px; height:42px; font-size:22px; opacity:.88; }
++  .preview-transform-handle { width:14px; height:14px; }
++  .preview-transform-handle.nw { left:-8px; top:-8px; }
++  .preview-transform-handle.ne { right:-8px; top:-8px; }
++  .preview-transform-handle.sw { left:-8px; bottom:-8px; }
++  .preview-transform-handle.se { right:-8px; bottom:-8px; }
++}

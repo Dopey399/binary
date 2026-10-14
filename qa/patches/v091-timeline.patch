@@ -1,0 +1,83 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -3421,23 +3426,56 @@
+ 
+   timeline?.addEventListener('pointerdown', (event) => {
+     if (event.pointerType === 'mouse' && event.button !== 0) return;
+-    if (event.target.closest('.timeline-clip') || event.target.closest('.track-rail') || event.target.closest('.replay-marker')) return;
+-    timelineScrubPointerId = event.pointerId; timelineScrubStartX = event.clientX; timelineWasScrubbed = false; pausePlayback(); try { timeline.setPointerCapture?.(event.pointerId); } catch (_) {}
++    if (event.target.closest('.track-rail') || event.target.closest('.replay-marker')) return;
++    if (event.pointerType === 'touch' && event.isPrimary === false) { timelineScrubPointerId = null; return; }
++    timelineScrubPointerId = event.pointerId;
++    timelineScrubStartX = event.clientX;
++    timelineWasScrubbed = false;
++    pausePlayback();
++    try { timeline.setPointerCapture?.(event.pointerId); } catch (_) {}
+   });
+   timeline?.addEventListener('pointermove', (event) => {
+-    if (timelineScrubPointerId !== event.pointerId || Math.abs(event.clientX - timelineScrubStartX) < 4) return;
+-    timelineWasScrubbed = true; const rect = timelineStage.getBoundingClientRect();
++    if (timelinePinchDistance || timelineScrubPointerId !== event.pointerId || Math.abs(event.clientX - timelineScrubStartX) < 4) return;
++    timelineWasScrubbed = true;
++    const rect = timelineStage.getBoundingClientRect();
+     const seconds = Core.clamp((event.clientX - rect.left - timelineTrackRailWidth()) / timelinePixelsPerSecond(), 0, Core.projectDuration(project));
+-    projectTime = seconds; updateTransportUI(); syncAllTracksAtTime(projectTime, { play:false }).then(() => drawFrame(projectTime)).catch(console.error); event.preventDefault();
++    projectTime = seconds;
++    updateTransportUI();
++    syncAllTracksAtTime(projectTime, { play:false }).then(() => drawFrame(projectTime)).catch(console.error);
++    event.preventDefault();
+   });
+-  const endTimelinePointer = (event) => { if (timelineScrubPointerId !== event.pointerId) return; timelineScrubPointerId = null; if (timelineWasScrubbed) seekProject(projectTime).catch(console.error); };
+-  timeline?.addEventListener('pointerup', endTimelinePointer); timeline?.addEventListener('pointercancel', endTimelinePointer);
+-  timeline?.addEventListener('touchstart', (event) => { if (event.touches.length===2) timelinePinchDistance=Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY); }, {passive:true});
++  const endTimelinePointer = (event) => {
++    if (timelineScrubPointerId !== event.pointerId) return;
++    timelineScrubPointerId = null;
++    if (timelineWasScrubbed) {
++      seekProject(projectTime).then(() => keepPlayheadInView(true)).catch(console.error);
++      setTimeout(() => { timelineWasScrubbed = false; }, 0);
++    }
++  };
++  timeline?.addEventListener('pointerup', endTimelinePointer);
++  timeline?.addEventListener('pointercancel', (event) => {
++    if (timelineScrubPointerId === event.pointerId) timelineScrubPointerId = null;
++    timelineWasScrubbed = false;
++  });
++  timeline?.addEventListener('touchstart', (event) => {
++    if (event.touches.length === 2) {
++      timelineScrubPointerId = null;
++      timelinePinchDistance = Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY);
++    }
++  }, {passive:true});
+   timeline?.addEventListener('touchmove', (event) => { if(event.touches.length!==2||!timelinePinchDistance)return; const distance=Math.hypot(event.touches[0].clientX-event.touches[1].clientX,event.touches[0].clientY-event.touches[1].clientY); const delta=distance-timelinePinchDistance; if(Math.abs(delta)<18)return; const nextIndex=Core.clamp(timelineZoomIndex+(delta>0?1:-1),0,TIMELINE_ZOOM_LEVELS.length-1); if(nextIndex!==timelineZoomIndex){timelineZoomIndex=nextIndex;renderTimeline();keepPlayheadInView(true);} timelinePinchDistance=distance; event.preventDefault(); }, {passive:false});
+-  timeline?.addEventListener('touchend',()=>{timelinePinchDistance=0;},{passive:true});
++  timeline?.addEventListener('touchend',(event)=>{if(event.touches.length<2)timelinePinchDistance=0;},{passive:true});
++  timeline?.addEventListener('touchcancel',()=>{timelinePinchDistance=0; timelineScrubPointerId=null;},{passive:true});
+ 
+-  previewTransformBox?.addEventListener('pointerdown',(event)=>{ if(event.target===previewDeleteHandle)return; beginTransformGesture(event.target?.dataset?.transform||'move',event); });
++  previewTransformBox?.addEventListener('pointerdown',(event)=>{
++    if(event.target===previewDeleteHandle)return;
++    event.stopPropagation();
++    beginTransformGesture(event.target?.dataset?.transform||'move',event);
++  });
+   previewTransformBox?.addEventListener('pointermove',updateTransformGesture); previewTransformBox?.addEventListener('pointerup',finishTransformGesture); previewTransformBox?.addEventListener('pointercancel',finishTransformGesture);
++  canvas?.addEventListener('pointermove',updateTransformGesture);
++  canvas?.addEventListener('pointerup',finishTransformGesture);
++  canvas?.addEventListener('pointercancel',finishTransformGesture);
+   previewDeleteHandle?.addEventListener('click',(event)=>{event.stopPropagation();$('deleteClipBtn')?.click();});
+ 
+   function wireWorkspaceResizer(handle,side){ handle?.addEventListener('pointerdown',(event)=>{ if(!workspace||window.innerWidth<1251)return; const rect=workspace.getBoundingClientRect(); handle.classList.add('dragging'); try { handle.setPointerCapture?.(event.pointerId); } catch (_) {} const move=(e)=>{const raw=side==='left'?e.clientX-rect.left:rect.right-e.clientX; const width=Core.clamp(raw,side==='left'?150:220,side==='left'?420:560); document.documentElement.style.setProperty(side==='left'?'--media-panel-w':'--inspector-panel-w',`${Math.round(width)}px`);}; const done=()=>{handle.classList.remove('dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',done);handle.removeEventListener('pointercancel',done);try{localStorage.setItem('cre8torcut.workspace.mediaW',getComputedStyle(document.documentElement).getPropertyValue('--media-panel-w'));localStorage.setItem('cre8torcut.workspace.inspectorW',getComputedStyle(document.documentElement).getPropertyValue('--inspector-panel-w'));}catch(_){}}; handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',done);handle.addEventListener('pointercancel',done);event.preventDefault();}); }
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -3472,7 +3510,10 @@
+   });
+ 
+   canvas.addEventListener('pointerdown', (event) => {
+-    if (!fxPickMode && !keyPickMode) return;
++    if (!fxPickMode && !keyPickMode) {
++      if (getSelectedClip() && !exportInProgress) beginTransformGesture('move', event);
++      return;
++    }
+     const clip = getSelectedClip();
+     if (!clip) return;
+     event.preventDefault();

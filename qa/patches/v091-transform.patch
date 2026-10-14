@@ -1,0 +1,73 @@
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1060,8 +1060,9 @@
+   }
+ 
+   function selectedClipCanvasBox() {
+-    const clip = getSelectedClip();
+-    if (!clip || !previewTransformBox || !canvas || !dropZone) return null;
++    const storedClip = getSelectedClip();
++    if (!storedClip || !previewTransformBox || !canvas || !dropZone) return null;
++    const clip = clipDraftFromControls(storedClip);
+     const asset = Core.getAsset(project, clip.assetId);
+     if (!asset) return null;
+     const zone = dropZone.getBoundingClientRect();
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1071,8 +1072,12 @@
+     let contentW, contentH, offsetX, offsetY;
+     if (zoneAspect > canvasAspect) { contentH = zone.height; contentW = contentH * canvasAspect; offsetX = (zone.width - contentW) / 2; offsetY = 0; }
+     else { contentW = zone.width; contentH = contentW / canvasAspect; offsetX = 0; offsetY = (zone.height - contentH) / 2; }
+-    const sourceW = Math.max(1, Number(asset.width) || canvas.width);
+-    const sourceH = Math.max(1, Number(asset.height) || canvas.height);
++    const location = Core.findClipLocation(project, storedClip.id);
++    const runtime = runtimeForAsset(clip.assetId);
++    const mediaEl = runtime?.kind === 'image' ? runtime.image : videoForTrack(location?.trackId || selectedTrackId || 'video_1');
++    const sourceSize = mediaSourceSize(mediaEl, asset);
++    const sourceW = Math.max(1, Number(sourceSize.width) || canvas.width);
++    const sourceH = Math.max(1, Number(sourceSize.height) || canvas.height);
+     const rot = Number(clip.effects?.rotation || 0);
+     const quarterTurn = Math.abs(Math.round(rot / 90)) % 2 === 1 && Math.abs(rot % 90) < .001;
+     const rw = quarterTurn ? sourceH : sourceW;
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1083,7 +1088,7 @@
+     const height = Math.max(18, rh * fit * layerScaleValue * (contentH / canvas.height));
+     const cx = offsetX + contentW / 2 + ((Core.clamp(Number(clip.layer?.x ?? 50), 0, 100) - 50) / 100) * contentW;
+     const cy = offsetY + contentH / 2 + ((Core.clamp(Number(clip.layer?.y ?? 50), 0, 100) - 50) / 100) * contentH;
+-    return { clip, contentW, contentH, offsetX, offsetY, cx, cy, width, height, rotation: rot };
++    return { clip: storedClip, contentW, contentH, offsetX, offsetY, cx, cy, width, height, rotation: rot };
+   }
+ 
+   function updatePreviewTransformOverlay() {
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1103,7 +1108,8 @@
+     pausePlayback(); transformGestureBaseProject = Core.clone(project);
+     const rect = dropZone.getBoundingClientRect();
+     transformGesture = { kind, pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, box, baseScale:Number(box.clip.layer?.scale ?? 100), baseX:Number(box.clip.layer?.x ?? 50), baseY:Number(box.clip.layer?.y ?? 50), baseRotation:Number(box.clip.effects?.rotation ?? 0), centerClientX:rect.left+box.cx, centerClientY:rect.top+box.cy, startDistance:Math.max(12,Math.hypot(event.clientX-(rect.left+box.cx),event.clientY-(rect.top+box.cy))), startAngle:Math.atan2(event.clientY-(rect.top+box.cy),event.clientX-(rect.left+box.cx)) };
+-    try { previewTransformBox?.setPointerCapture?.(event.pointerId); } catch (_) {} event.preventDefault();
++    const captureTarget = event.target?.setPointerCapture ? event.target : previewTransformBox;
++    try { captureTarget?.setPointerCapture?.(event.pointerId); } catch (_) {} event.preventDefault();
+   }
+ 
+   function updateTransformGesture(event) {
+--- a/android-build/app/src/main/assets/app.js
++++ b/android-build/app/src/main/assets/app.js
+@@ -1275,14 +1281,13 @@
+         block.querySelector('strong').textContent = placement.clip.name;
+         block.addEventListener('click', (event) => {
+           event.stopPropagation();
+-          const rect = block.getBoundingClientRect();
+-          const ratio = Core.clamp((event.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
++          if (timelineWasScrubbed) { timelineWasScrubbed = false; return; }
+           selectedClipId = placement.clip.id;
+           selectedTrackId = track.id;
+           syncInspector();
+           renderTimeline();
+           setEditButtons();
+-          seekProject(placement.start + placement.duration * ratio).catch(console.error);
++          updatePreviewTransformOverlay();
+         });
+         lane.appendChild(block);
+       });
