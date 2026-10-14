@@ -1,34 +1,13 @@
 --- a/android-build/app/src/main/assets/app.js
 +++ b/android-build/app/src/main/assets/app.js
-@@ -35,6 +35,7 @@
-   const previewTransformBox = $('previewTransformBox');
-   const previewRotateHandle = $('previewRotateHandle');
-   const previewDeleteHandle = $('previewDeleteHandle');
+@@ -37,0 +38 @@
 +  const previewModeHandle = $('previewModeHandle');
-   const mediaResizeHandle = $('mediaResizeHandle');
-   const inspectorResizeHandle = $('inspectorResizeHandle');
-   const timelineResizeGrip = $('timelineResizeGrip');
-@@ -166,6 +167,7 @@
-   let timelineScrubStartX = 0;
-   let transformGestureBaseProject = null;
-   let transformGesture = null;
+@@ -168,0 +170 @@
 +  let previewTransformMode = 'crop';
-   let timelinePinchDistance = 0;
- 
-   function timelinePixelsPerSecond() { return TIMELINE_ZOOM_LEVELS[timelineZoomIndex] || 48; }
-@@ -1059,7 +1061,7 @@
-     return { contract: replayBridgePayload.contract, events: replayBridgePayload.events.length, duration: replayBridgePayload.duration };
-   }
- 
+@@ -1062 +1064 @@
 -  function selectedClipCanvasBox() {
 +  function selectedClipCanvasGeometry() {
-     const storedClip = getSelectedClip();
-     if (!storedClip || !previewTransformBox || !canvas || !dropZone) return null;
-     const clip = clipDraftFromControls(storedClip);
-@@ -1088,7 +1090,28 @@
-     const height = Math.max(18, rh * fit * layerScaleValue * (contentH / canvas.height));
-     const cx = offsetX + contentW / 2 + ((Core.clamp(Number(clip.layer?.x ?? 50), 0, 100) - 50) / 100) * contentW;
-     const cy = offsetY + contentH / 2 + ((Core.clamp(Number(clip.layer?.y ?? 50), 0, 100) - 50) / 100) * contentH;
+@@ -1091 +1093,22 @@
 -    return { clip: storedClip, contentW, contentH, offsetX, offsetY, cx, cy, width, height, rotation: rot };
 +    const cropX = Core.clamp(Number(clip.layer?.cropX ?? 0), 0, 95);
 +    const cropY = Core.clamp(Number(clip.layer?.cropY ?? 0), 0, 95);
@@ -52,20 +31,10 @@
 +    if (!g) return null;
 +    const active = previewTransformMode === 'layer' ? g.whole : g.crop;
 +    return { ...g, ...active };
-   }
- 
-   function updatePreviewTransformOverlay() {
-@@ -1096,18 +1119,55 @@
-     const box = selectedClipCanvasBox();
-     if (!box || exportInProgress || keyPickMode || fxPickMode || document.fullscreenElement === dropZone) { previewTransformBox.hidden = true; return; }
-     previewTransformBox.hidden = false;
+@@ -1098,0 +1122,2 @@
 +    previewTransformBox.classList.toggle('crop-mode', previewTransformMode === 'crop');
 +    previewTransformBox.classList.toggle('layer-mode', previewTransformMode === 'layer');
-     previewTransformBox.style.left = `${box.cx - box.width / 2}px`;
-     previewTransformBox.style.top = `${box.cy - box.height / 2}px`;
-     previewTransformBox.style.width = `${box.width}px`;
-     previewTransformBox.style.height = `${box.height}px`;
-     previewTransformBox.style.transform = `rotate(${box.rotation}deg)`;
+@@ -1103,0 +1129,19 @@
 +    if (previewModeHandle) {
 +      previewModeHandle.textContent = previewTransformMode === 'crop' ? 'Whole' : 'Crop';
 +      previewModeHandle.title = previewTransformMode === 'crop' ? 'Edit the whole image' : 'Edit the crop box';
@@ -85,12 +54,7 @@
 +      x: Core.clamp((localX / Math.max(1, geometry.whole.width) + .5) * 100, 0, 100),
 +      y: Core.clamp((localY / Math.max(1, geometry.whole.height) + .5) * 100, 0, 100)
 +    };
-   }
- 
-   function beginTransformGesture(kind, event) {
-     const box = selectedClipCanvasBox(); if (!box || exportInProgress) return;
-     pausePlayback(); transformGestureBaseProject = Core.clone(project);
-     const rect = dropZone.getBoundingClientRect();
+@@ -1110 +1154,17 @@
 -    transformGesture = { kind, pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, box, baseScale:Number(box.clip.layer?.scale ?? 100), baseX:Number(box.clip.layer?.x ?? 50), baseY:Number(box.clip.layer?.y ?? 50), baseRotation:Number(box.clip.effects?.rotation ?? 0), centerClientX:rect.left+box.cx, centerClientY:rect.top+box.cy, startDistance:Math.max(12,Math.hypot(event.clientX-(rect.left+box.cx),event.clientY-(rect.top+box.cy))), startAngle:Math.atan2(event.clientY-(rect.top+box.cy),event.clientX-(rect.left+box.cx)) };
 +    const requested = kind || 'move';
 +    const activeKind = requested === 'rotate'
@@ -109,13 +73,7 @@
 +      startDistance:Math.max(12,Math.hypot(event.clientX-(rect.left+box.whole.cx),event.clientY-(rect.top+box.whole.cy))),
 +      startAngle:Math.atan2(event.clientY-(rect.top+box.whole.cy),event.clientX-(rect.left+box.whole.cx))
 +    };
-     const captureTarget = event.target?.setPointerCapture ? event.target : previewTransformBox;
-     try { captureTarget?.setPointerCapture?.(event.pointerId); } catch (_) {} event.preventDefault();
-   }
-@@ -1115,9 +1175,40 @@
-   function updateTransformGesture(event) {
-     const g=transformGesture; if (!g || g.pointerId!==event.pointerId) return; const clip=getSelectedClip(); if(!clip) return;
-     let layerPatch={}, effectsPatch={};
+@@ -1118,3 +1178,34 @@
 -    if(g.kind==='move'){ const dx=event.clientX-g.startX,dy=event.clientY-g.startY; layerPatch.x=Core.clamp(g.baseX+(dx/Math.max(1,g.box.contentW))*100,0,100); layerPatch.y=Core.clamp(g.baseY+(dy/Math.max(1,g.box.contentH))*100,0,100); }
 -    else if(g.kind==='scale'){ const distance=Math.max(6,Math.hypot(event.clientX-g.centerClientX,event.clientY-g.centerClientY)); layerPatch.scale=Core.clamp(g.baseScale*(distance/g.startDistance),10,300); }
 -    else if(g.kind==='rotate'){ const angle=Math.atan2(event.clientY-g.centerClientY,event.clientX-g.centerClientX); let deg=g.baseRotation+(angle-g.startAngle)*180/Math.PI; while(deg>180)deg-=360; while(deg<-180)deg+=360; effectsPatch.rotation=Math.round(deg); }
@@ -153,24 +111,12 @@
 +      let deg=g.baseRotation+(angle-g.startAngle)*180/Math.PI;
 +      while(deg>180)deg-=360; while(deg<-180)deg+=360; effectsPatch.rotation=Math.round(deg);
 +    }
-     const next=Core.updateClip(project,clip.id,{layer:layerPatch,effects:effectsPatch}); setProject(next,{record:false,autosave:false}); drawFrame(); event.preventDefault();
-   }
- 
-@@ -1358,6 +1449,10 @@
-         scale: Number(layerScale?.value ?? baseClip.layer?.scale ?? 100),
-         x: Number(layerX?.value ?? baseClip.layer?.x ?? 50),
-         y: Number(layerY?.value ?? baseClip.layer?.y ?? 50),
+@@ -1360,0 +1452,4 @@
 +        cropX: Number(baseClip.layer?.cropX ?? 0),
 +        cropY: Number(baseClip.layer?.cropY ?? 0),
 +        cropWidth: Number(baseClip.layer?.cropWidth ?? 100),
 +        cropHeight: Number(baseClip.layer?.cropHeight ?? 100),
-         blendMode: layerBlend?.value || baseClip.layer?.blendMode || 'normal'
-       },
-       overlay: {
-@@ -2211,7 +2306,18 @@
-     ctx.rotate((g.rot * Math.PI / 180) + (options.rotation || 0));
-     const scaleMul = options.scale ?? 1;
-     ctx.scale(scaleMul, scaleMul);
+@@ -2214 +2309,12 @@
 -    ctx.drawImage(drawSource, -(g.sourceW * g.scale) / 2, -(g.sourceH * g.scale) / 2, g.sourceW * g.scale, g.sourceH * g.scale);
 +    const cropX = Core.clamp(Number(clip.layer?.cropX ?? 0), 0, 95);
 +    const cropY = Core.clamp(Number(clip.layer?.cropY ?? 0), 0, 95);
@@ -184,23 +130,8 @@
 +    const dx = -fullW / 2 + fullW * cropX / 100, dy = -fullH / 2 + fullH * cropY / 100;
 +    const dw = fullW * cropWidth / 100, dh = fullH * cropHeight / 100;
 +    ctx.drawImage(drawSource, sx, sy, sw, sh, dx, dy, dw, dh);
-     ctx.restore();
-     ctx.filter = 'none';
-     ctx.globalCompositeOperation = 'source-over';
-@@ -3468,7 +3574,7 @@
-   timeline?.addEventListener('touchcancel',()=>{timelinePinchDistance=0; timelineScrubPointerId=null;},{passive:true});
- 
-   previewTransformBox?.addEventListener('pointerdown',(event)=>{
+@@ -3471 +3577 @@
 -    if(event.target===previewDeleteHandle)return;
 +    if(event.target===previewDeleteHandle || event.target===previewModeHandle)return;
-     event.stopPropagation();
-     beginTransformGesture(event.target?.dataset?.transform||'move',event);
-   });
-@@ -3477,6 +3583,7 @@
-   canvas?.addEventListener('pointerup',finishTransformGesture);
-   canvas?.addEventListener('pointercancel',finishTransformGesture);
-   previewDeleteHandle?.addEventListener('click',(event)=>{event.stopPropagation();$('deleteClipBtn')?.click();});
+@@ -3479,0 +3586 @@
 +  previewModeHandle?.addEventListener('click',(event)=>{ event.stopPropagation(); previewTransformMode = previewTransformMode === 'crop' ? 'layer' : 'crop'; updatePreviewTransformOverlay(); });
- 
-   function wireWorkspaceResizer(handle,side){ handle?.addEventListener('pointerdown',(event)=>{ if(!workspace||window.innerWidth<1251)return; const rect=workspace.getBoundingClientRect(); handle.classList.add('dragging'); try { handle.setPointerCapture?.(event.pointerId); } catch (_) {} const move=(e)=>{const raw=side==='left'?e.clientX-rect.left:rect.right-e.clientX; const width=Core.clamp(raw,side==='left'?150:220,side==='left'?420:560); document.documentElement.style.setProperty(side==='left'?'--media-panel-w':'--inspector-panel-w',`${Math.round(width)}px`);}; const done=()=>{handle.classList.remove('dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',done);handle.removeEventListener('pointercancel',done);try{localStorage.setItem('cre8torcut.workspace.mediaW',getComputedStyle(document.documentElement).getPropertyValue('--media-panel-w'));localStorage.setItem('cre8torcut.workspace.inspectorW',getComputedStyle(document.documentElement).getPropertyValue('--inspector-panel-w'));}catch(_){}}; handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',done);handle.addEventListener('pointercancel',done);event.preventDefault();}); }
-   wireWorkspaceResizer(mediaResizeHandle,'left'); wireWorkspaceResizer(inspectorResizeHandle,'right');
