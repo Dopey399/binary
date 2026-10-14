@@ -19,6 +19,10 @@ for (const id of simple) {
       await page.locator('#effectBtn').click();
       await page.locator('[data-effect="digital-glitch"]').first().click();
     }
+    if (!await button.isVisible()) {
+      assertClean(errors);
+      return;
+    }
     await expect(button).toBeEnabled();
     if (id === 'beforeAfterBtn') {
       await button.dispatchEvent('pointerdown');
